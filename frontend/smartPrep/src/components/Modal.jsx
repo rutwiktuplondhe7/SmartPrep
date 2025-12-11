@@ -18,8 +18,7 @@ const Modal = ({
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
                 <h3 className='md:text-lg font-medium text-gray-900'>
                     {title}
-                </h3>
-                
+                </h3>  
             </div>
         )}
         <button type="button" className='text-gray-400 bg-transparent hover:bg-orange-100 hover:text-gray-900 rounded-lg text-sm w-8 h-8 flex justify-center items-center absolute top-3.5 right-3.5 cursor-pointer' onClick={onClose}>
@@ -33,10 +32,7 @@ const Modal = ({
         {/* Modal Body (Scrollable) */}
         <div className='flex-1 overflow-y-auto custom-scrollbar'>
             {children}
-
         </div>
-
-
         </div>
     </div>
   )
