@@ -5,12 +5,10 @@ export const API_PATHS = {
         REGISTER: "/api/auth/register" , //Signup
         LOGIN: "/api/auth/login", //Authenticate user and return JWT token
         GET_PROFILE: "/api/auth/profile", //Get logged-in user details
-
     },
 
     IMAGE: {
         UPLOAD_IMAGE: "/api/auth/upload-image", //upload profile picture 
-
     },
 
     AI: {

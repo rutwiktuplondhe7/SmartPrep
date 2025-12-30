@@ -13,7 +13,6 @@ const SummaryCard = ({
   onSelect,
   onDelete
   
-
 }) => {
   return (
     <div className='bg-white border border-gray-300/40 rounded-xl p-2 overflow-hidden cursor-pointer hover:shadow-xl shadow-100 relative group'
@@ -74,4 +73,4 @@ const SummaryCard = ({
   )
 }
 
-export default SummaryCard
+export default SummaryCard;

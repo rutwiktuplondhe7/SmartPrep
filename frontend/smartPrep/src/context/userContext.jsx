@@ -43,8 +43,6 @@ const UserProvider = ({ children }) => {
     fetchUser();
  }, []);
 
-    
-
 
     return (
         <UserContext.Provider value = {{ user, loading, updateUser, clearUser}}>

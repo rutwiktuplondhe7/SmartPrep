@@ -3,7 +3,7 @@ import { LuEye, LuEyeOff } from "react-icons/lu";
 
 
 const Input = ({ value, onChange, label, placeholder, type }) => {
-
+    
     const [showPassword, setShowPassword] = useState(false);
     const toggleShowPassword = () => {
         setShowPassword(!showPassword);
