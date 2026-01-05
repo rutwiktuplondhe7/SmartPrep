@@ -47,7 +47,7 @@ const CreateSessionForm = () => {
                     role,
                     experience,
                     topicsToFocus,
-                    numbersOfQuestions: 10,
+                    numbersOfQuestions: 7,
                 }
             );
             //Should be arry like [{question, answer}, ...]

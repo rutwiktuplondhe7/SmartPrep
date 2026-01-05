@@ -32,11 +32,22 @@ const generateInterviewQuestions = async(req, res) => {
         const data = JSON.parse(cleannedText);
         return res.status(200).json(data);
         
-    }catch(error){
-        return res.status(500).json({ message: "Failed to generate questions!"
-            ,error: error.message
-        });
-    }
+    }catch (error) {
+  console.error("AI ERROR FULL:", {
+    message: error.message,
+    status: error.status,
+    code: error.code,
+    details: error.details,
+    stack: error.stack,
+    raw: error
+  });
+
+  return res.status(500).json({
+    message: "Failed to generate questions!",
+    error: error.message,
+    status: error.status,
+  });
+}
 };
 
 
