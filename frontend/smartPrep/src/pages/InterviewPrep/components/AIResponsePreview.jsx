@@ -84,7 +84,7 @@ const AIResponsePreview = ({content}) => {
                         return<tr>{children}</tr>;
                     },
                     th({ children }) {
-                        return<th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppecase tracking-wider">{children}</th>;
+                        return<th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{children}</th>;
                     },
                     td({ children }) {
                         return<td className="px-3 py-2 whitespace-nowrap text-sm">{children}</td>;
@@ -114,25 +114,25 @@ function CodeBlock({code, language }) {
         setCopied(true);
         setTimeout( () => setCopied(false), 2000);
     };
-    return <div className=''>
-        <div className=''>
-            <div className=''>
-                <LuCode size={16} className=''/>
-                 <span className=''>
+    return <div className='relative my-6 rounded-lg overflow-hidden bg-gray-50 border border-gray-200'>
+        <div className='flex items-center justify-between px-4 py-2 bg-gray-100 border-b border-gray-200'>
+            <div className='flex items-center space-x-2'>
+                <LuCode size={16} className='text-gray-500'/>
+                 <span className='text-xs font-semibold text-gray-600 uppercase tracking-wide'>
                     {language || 'Code'}
                  </span>
             </div>
             <button 
             onClick={copyCode}
-            className=''
+            className='text-gray-500 hover:text-gray-700 focus:outline-none relative group'
             aria-label="Copy code"
             >
-                {copied ? (<LuCheck size={16} className=''/>) : (
-                    <LuCopy size={16} className=''/>
+                {copied ? (<LuCheck size={16} className='text-green-600'/>) : (
+                    <LuCopy size={16} />
                 )
                 }
                 { copied && (
-                    <span className=''>
+                    <span className='absolute -top-8 right-0 bg-black text-white text-xs rounded-md px-2 py-1 opacity-80 group-hover:opacity-100 transition'>
                         Copied!
                     </span>
                 )}
@@ -142,7 +142,7 @@ function CodeBlock({code, language }) {
         <SyntaxHighlighter 
             language = {language} 
             style= {oneLight}
-            customStyle={{ fontSize: 12.5, magrin: 0, padding: '1rem', background: 'transparent'}} >
+            customStyle={{ fontSize: 12.5, margin: 0, padding: '1rem', background: 'transparent'}} >
                 {code}
         </SyntaxHighlighter>
     </div>
