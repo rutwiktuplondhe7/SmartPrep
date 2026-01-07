@@ -41,33 +41,29 @@ const InterviewPrep = () => {
   } ;
 
   //Generate Concept Explaantion
-  const generateConceptExplanation = async (question) => {
-    try {
-      setErrorMsg("");
-      setExplanation(null);
+  const generateConceptExplanation = async (question, answer) => {
+  try {
+    setErrorMsg("");
+    setExplanation(null);
+    setIsLoading(true);
+    setOpenLeanMoreDrawer(true);
 
-      setIsLoading(true);
-      setOpenLeanMoreDrawer(true);
+    const response = await axiosInstance.post(
+      API_PATHS.AI.GENERATE_EXPLANATION,
+      { question, answer }
+    );
 
-      const response = await axiosInstance.post(
-        API_PATHS.AI.GENERATE_EXPLANATION,
-        {
-          question,
-        }
-      );
+    if (response.data) {
+      setExplanation(response.data);
+    }
 
-      if (response.data) {
-        setExplanation(response.data);
-      }
+  } catch (error) {
+    setErrorMsg("Failed to generate explanation, Try again later");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
-    } catch (error) {
-      setExplanation(null);
-      setErrorMsg("Failed to generate explanation, Try again later");
-      console.error("Error: ",error);
-    } finally {
-      setIsLoading(false);
-    };
-  } ;
 
   //Pin Question 
   const toggleQuestionPinStatus = async (questionId) => {
@@ -143,8 +139,9 @@ const InterviewPrep = () => {
                               question={data?.question}
                               answer={data?.answer}
                               onLearnMore={() =>
-                                generateConceptExplanation(data.question)
+                                generateConceptExplanation(data.question, data.answer)
                               }
+
                               isPinned={data?.isPinned}
                               onTogglePin={() => toggleQuestionPinStatus(data._id)}
                               />

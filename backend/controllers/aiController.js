@@ -110,15 +110,16 @@ const generateInterviewQuestions = async (req, res) => {
 };
 
 //@route POST /api/ai/generate-explanation
+//@route POST /api/ai/generate-explanation
 const generateConceptExplanation = async (req, res) => {
   try {
-    const { question } = req.body;
+    const { question, answer } = req.body;
 
-    if (!question) {
-      return res.status(400).json({ message: "Missing question" });
+    if (!question || !answer) {
+      return res.status(400).json({ message: "Missing question or answer" });
     }
 
-    let prompt = conceptExplainPrompt(question);
+    let prompt = conceptExplainPrompt(question, answer);
 
     if (prompt.length > LIMITS.MAX_PROMPT_CHARS) {
       prompt = prompt.slice(0, LIMITS.MAX_PROMPT_CHARS);
@@ -126,7 +127,7 @@ const generateConceptExplanation = async (req, res) => {
 
     const payload = {
       model: "openai/gpt-3.5-turbo",
-      temperature: 0.6,
+      temperature: 0.5, // LOWERED to reduce creative drift
       messages: [{ role: "user", content: prompt }]
     };
 
@@ -152,6 +153,7 @@ const generateConceptExplanation = async (req, res) => {
     });
   }
 };
+
 
 module.exports = {
   generateInterviewQuestions,
