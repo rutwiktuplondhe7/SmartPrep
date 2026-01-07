@@ -201,7 +201,9 @@ npm start
 
 ### 3️⃣ Frontend Setup
 ```bash
+cd ..
 cd frontend
+cd smartPrep
 npm install
 npm run dev
 ```
