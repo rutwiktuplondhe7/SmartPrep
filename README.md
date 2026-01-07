@@ -175,7 +175,7 @@ Follow the steps below to run the project locally.
 
 ###  1️⃣ Clone the Repository
 ```bash
-git clone https://github.com/your-username/smartprep.git
+git clone https://github.com/aryandumale04/SmartPrep.git
 cd smartprep
 ```
 
