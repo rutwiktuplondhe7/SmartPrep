@@ -17,6 +17,20 @@ const CreateSessionForm = () => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
+  const FREE_AI_PREVIEW_MESSAGE =
+    "SmartPrep is running on limited free AI capacity. You’ve reached the free preview limit for this feature.";
+
+  const getGracefulAIError = (err, fallback) => {
+    const code = err?.response?.data?.code;
+    const message = err?.response?.data?.message;
+
+    if (code === "AI_PREVIEW_LIMIT_REACHED") {
+      return message || FREE_AI_PREVIEW_MESSAGE;
+    }
+
+    return message || fallback;
+  };
+
   const handleChange = (key, value) => {
     setFormData((prevData) => ({
       ...prevData,
@@ -43,6 +57,7 @@ const CreateSessionForm = () => {
         experience,
         topicsToFocus,
         numbersOfQuestions: 7,
+        purpose: "createSession",
       });
 
       const generateQuestions = aiResponse.data;
@@ -55,12 +70,10 @@ const CreateSessionForm = () => {
       if (response.data?.session?._id) {
         navigate(`/interview-prep/${response.data?.session._id}`);
       }
-    } catch (error) {
-      if (error.response && error.response.data.message) {
-        setError(error.response.data.message);
-      } else {
-        setError("Something went wrong. Please try again.");
-      }
+    } catch (err) {
+      setError(
+        getGracefulAIError(err, "Something went wrong. Please try again.")
+      );
     } finally {
       setIsLoading(false);
     }

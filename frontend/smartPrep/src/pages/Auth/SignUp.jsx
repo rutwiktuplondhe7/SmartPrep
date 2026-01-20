@@ -116,8 +116,7 @@ const SignUp = ({ setCurrentPage }) => {
         <button type='submit' className='btn-primary'>
           SIGN UP
         </button>
-
-        {/* ✅ centered as requested */}
+        
         <p className='text-[13px] text-slate-800 mt-3 text-center'>
           Already have an account?{" "}
           <button

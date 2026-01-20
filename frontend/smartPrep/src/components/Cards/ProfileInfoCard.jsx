@@ -31,7 +31,7 @@ const ProfileInfoCard = () => {
             {user?.name || ""}
           </div>
 
-          {/* palette update amber -> rose */}
+         
           <button
             className="text-rose-600 text-sm font-semibold cursor-pointer hover:underline"
             onClick={handleLogout}

@@ -90,7 +90,7 @@ const Login = ({ setCurrentPage }) => {
           LOGIN
         </button>
 
-        {/* ✅ centered as requested */}
+        
         <p className="text-[13px] text-slate-800 mt-3 text-center">
           Don't have an account?{" "}
           <button

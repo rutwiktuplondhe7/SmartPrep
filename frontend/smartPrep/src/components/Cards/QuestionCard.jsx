@@ -45,7 +45,7 @@ const QuestionCard = ({
           <div className='flex items-center justify-end ml-4 relative'>
             <div className={`flex ${isExpanded ? "md:flex" : "md:hidden group-hover:flex"}`}>
               
-              {/* ✅ Pin button: brand neutral + sharp */}
+              {/* pin button */}
               <button
                 className='flex items-center gap-2 text-xs text-gray-900 font-medium bg-gray-100 px-3 py-1 mr-2 rounded text-nowrap border border-gray-100 hover:border-gray-300 cursor-pointer'
                 onClick={onTogglePin}
@@ -56,7 +56,7 @@ const QuestionCard = ({
                 </span>
               </button>
 
-              {/* ✅ Learn More: coral/rose brand */}
+             {/* learn more */}
               <button
                 className='flex items-center gap-2 text-xs text-rose-700 font-medium bg-rose-50 px-3 py-1 mr-2 rounded text-nowrap border border-rose-100 hover:border-rose-200 cursor-pointer'
                 onClick={() => {

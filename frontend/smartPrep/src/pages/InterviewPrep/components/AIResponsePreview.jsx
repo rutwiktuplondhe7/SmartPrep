@@ -5,13 +5,12 @@ import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 
-/**
- * Converts structured explanation object into readable markdown
- */
+//  Converts structured explanation object into readable markdown
+ 
 const objectToMarkdown = (obj) => {
   if (!obj || typeof obj !== "object") return "";
 
-  // 🔥 Special handling for your AI response format
+
   // If it has explanation field, use only that.
   if (obj.explanation && typeof obj.explanation === "string") {
     return obj.explanation;

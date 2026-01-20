@@ -1,5 +1,5 @@
 import moment from 'moment';
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from "framer-motion";
 import { LuCircleAlert, LuListCollapse } from 'react-icons/lu';
@@ -26,7 +26,25 @@ const InterviewPrep = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isUpdateLoader, setIsUpdateLoader] = useState(false);
 
-  //Fetch Session data by session id
+  const FREE_AI_PREVIEW_MESSAGE =
+    "SmartPrep is running on limited free AI capacity. You’ve reached the free preview limit for this feature.";
+
+  const getGracefulAIError = (error, fallback) => {
+    const code = error?.response?.data?.code;
+    const message = error?.response?.data?.message;
+
+    if (code === "AI_PREVIEW_LIMIT_REACHED") {
+      return message || FREE_AI_PREVIEW_MESSAGE;
+    }
+
+    return message || error?.message || fallback;
+  };
+
+  const isPreviewLimitError = (error) => {
+    return error?.response?.data?.code === "AI_PREVIEW_LIMIT_REACHED";
+  };
+
+  // Fetch Session data by session id
   const fetchSessionDetailsById = async () => {
     try {
       const response = await axiosInstance.get(
@@ -40,8 +58,8 @@ const InterviewPrep = () => {
     }
   };
 
-  //Generate Concept Explanation
-  const generateConceptExplanation = async (question, answer) => {
+  // Generate Concept Explanation
+  const generateConceptExplanation = async (questionId, question, answer) => {
     try {
       setErrorMsg("");
       setExplanation(null);
@@ -55,16 +73,33 @@ const InterviewPrep = () => {
 
       if (response.data) {
         setExplanation(response.data);
+
+        if (questionId) {
+          try {
+            await axiosInstance.post(API_PATHS.QUESTION.LEARN_MORE(questionId));
+            fetchSessionDetailsById();
+          } catch (err) {
+            console.error("Failed to increment learnMoreCount:", err);
+          }
+        }
+      }
+    } catch (error) {
+      const msg = getGracefulAIError(error, "Failed to generate explanation.");
+
+      if (isPreviewLimitError(error)) {
+        setOpenLeanMoreDrawer(false);
+        setIsLoading(false);
+        toast.error(msg);
+        return;
       }
 
-    } catch (error) {
-      setErrorMsg("Failed to generate explanation, Try again later");
+      setErrorMsg(msg);
     } finally {
       setIsLoading(false);
     }
   };
 
-  //Pin Question
+  // Pin Question
   const toggleQuestionPinStatus = async (questionId) => {
     try {
       const response = await axiosInstance.post(
@@ -79,9 +114,10 @@ const InterviewPrep = () => {
     }
   };
 
-  //Add more questions to a session
+  // Add more questions to a session
   const uploadMoreQuestions = async () => {
     try {
+      setErrorMsg("");
       setIsUpdateLoader(true);
 
       const aiResponse = await axiosInstance.post(
@@ -94,12 +130,13 @@ const InterviewPrep = () => {
             : [sessionData.topicToFocus],
           description: sessionData?.description,
           numbersOfQuestions: 5,
+          purpose: "loadMoreQuestions",
         }
       );
 
       const generatedQuestions = Array.isArray(aiResponse.data)
         ? aiResponse.data.filter(
-          q =>
+          (q) =>
             q &&
             typeof q.question === "string" &&
             typeof q.answer === "string"
@@ -123,11 +160,8 @@ const InterviewPrep = () => {
         fetchSessionDetailsById();
       }
     } catch (error) {
-      setErrorMsg(
-        error.response?.data?.message ||
-        error.message ||
-        "Something went wrong. Please try again."
-      );
+      const msg = getGracefulAIError(error, "Something went wrong. Please try again.");
+      toast.error(msg);
     } finally {
       setIsUpdateLoader(false);
     }
@@ -142,32 +176,29 @@ const InterviewPrep = () => {
 
   return (
     <DashboardLayout>
-     <RoleInfoHeader
-  isDrawerOpen={openLeanMoreDrawer}
-  role={sessionData?.role || ""}
-  topicToFocus={sessionData?.topicToFocus || ""}
-  experience={sessionData?.experience || "-"}
-  questions={sessionData?.questions?.length || "-"}
-  description={sessionData?.description || ""}
-  lastUpdated={
-    sessionData?.updatedAt
-      ? moment(sessionData.updatedAt).format("Do MMM YYYY")
-      : ""
-  }
-/>
-
+      <RoleInfoHeader
+        isDrawerOpen={openLeanMoreDrawer}
+        role={sessionData?.role || ""}
+        topicToFocus={sessionData?.topicToFocus || ""}
+        experience={sessionData?.experience || "-"}
+        questions={sessionData?.questions?.length || "-"}
+        description={sessionData?.description || ""}
+        lastUpdated={
+          sessionData?.updatedAt
+            ? moment(sessionData.updatedAt).format("Do MMM YYYY")
+            : ""
+        }
+      />
 
       <div className='container mx-auto pt-4 pb-4 px-4'>
-        {/* ✅ heading now aligned with centered content */}
         <div className='grid grid-cols-12 gap-4 mt-5 mb-10'>
           <div
             className={`
               col-span-12
               ${openLeanMoreDrawer
-  ? "md:col-span-6 md:col-start-2"
-  : "md:col-span-10 md:col-start-2"
-}
-
+                ? "md:col-span-6 md:col-start-2"
+                : "md:col-span-10 md:col-start-2"
+              }
             `}
           >
             <h2 className='text-lg font-semibold text-black mb-4'>
@@ -197,14 +228,14 @@ const InterviewPrep = () => {
                         question={data?.question}
                         answer={data?.answer}
                         onLearnMore={() =>
-                          generateConceptExplanation(data.question, data.answer)
+                          generateConceptExplanation(data._id, data.question, data.answer)
                         }
                         isPinned={data?.isPinned}
                         onTogglePin={() => toggleQuestionPinStatus(data._id)}
                       />
 
                       {!isLoading &&
-                        sessionData?.questions?.length == index + 1 && (
+                        sessionData?.questions?.length === index + 1 && (
                           <div className='flex items-center justify-center mt-5'>
                             <button
                               className='flex items-center gap-3 text-sm text-white font-medium bg-black px-5 py-2 mr-2 rounded text-nowrap cursor-pointer'
@@ -219,8 +250,7 @@ const InterviewPrep = () => {
                               Load More
                             </button>
                           </div>
-                        )
-                      }
+                        )}
                     </>
                   </motion.div>
                 );
@@ -236,7 +266,8 @@ const InterviewPrep = () => {
         >
           {errorMsg && (
             <p className='flex gap-2 text-sm text-rose-600 font-medium'>
-              <LuCircleAlert className='mt-1' />{errorMsg}
+              <LuCircleAlert className='mt-1' />
+              {errorMsg}
             </p>
           )}
 
@@ -248,7 +279,7 @@ const InterviewPrep = () => {
         </Drawer>
       </div>
     </DashboardLayout>
-  )
-}
+  );
+};
 
-export default InterviewPrep
+export default InterviewPrep;
