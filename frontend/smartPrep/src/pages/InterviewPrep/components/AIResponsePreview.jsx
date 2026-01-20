@@ -14,86 +14,166 @@ const objectToMarkdown = (obj) => {
 
   return Object.entries(obj)
     .map(([key, value]) => {
-      if (typeof value === "object") {
-        return `## ${key}\n\n${JSON.stringify(value, null, 2)}`;
+      if (value === null || value === undefined) {
+        return `## ${key}\n\n-`;
       }
+
+      if (typeof value === "object") {
+        return `## ${key}\n\n\`\`\`json\n${JSON.stringify(value, null, 2)}\n\`\`\``;
+      }
+
       return `## ${key}\n\n${String(value)}`;
     })
     .join("\n\n");
 };
 
+const stripMarkdownFences = (str) => {
+  if (typeof str !== "string") return str;
+
+  let s = str.trim();
+
+  // remove ```json ... ``` or ``` ... ```
+  if (s.startsWith("```")) {
+    s = s.replace(/^```[a-zA-Z]*\s*/i, "");
+    s = s.replace(/```$/i, "");
+  }
+
+  return s.trim();
+};
+
+const safeJsonParse = (str) => {
+  if (typeof str !== "string") return null;
+
+  const s = stripMarkdownFences(str);
+
+  if (!s.startsWith("{") && !s.startsWith("[")) return null;
+
+  try {
+    return JSON.parse(s);
+  } catch {
+    return null;
+  }
+};
+
+const unescapeCommon = (str) => {
+  if (typeof str !== "string") return str;
+
+  return str
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "\r")
+    .replace(/\\t/g, "\t")
+    .replace(/\\"/g, '"')
+    .replace(/\\'/g, "'")
+    .replace(/\\`/g, "`")
+    .replace(/\\\*/g, "*")
+    .replace(/\\_/g, "_")
+    .replace(/\\\//g, "/")
+    .replace(/\\\\/g, "\\");
+};
+
 const extractExplanationFromJsonLikeString = (str) => {
   if (typeof str !== "string") return null;
 
-  const s = str.trim();
+  const s = stripMarkdownFences(str).trim();
 
-  // Try direct JSON parse first
-  if (s.startsWith("{") && s.endsWith("}")) {
-    try {
-      const parsed = JSON.parse(s);
-      if (parsed && typeof parsed.explanation === "string") {
-        return parsed.explanation;
-      }
-    } catch (e) {
-      // ignore parse error and fallback below
-    }
+  // 1) if it is valid JSON, parse and return explanation
+  const parsed = safeJsonParse(s);
+  if (parsed) {
+    if (typeof parsed === "string") return parsed;
+    if (typeof parsed.explanation === "string") return parsed.explanation;
+    if (typeof parsed.content === "string") return parsed.content;
+    if (typeof parsed.message === "string") return parsed.message;
+    return objectToMarkdown(parsed);
   }
 
-  // Fallback: extract explanation from JSON-like content even if invalid JSON
+  // 2) JSON-like fallback extraction
+  // Matches "explanation": "...."
   const match = s.match(/"explanation"\s*:\s*"([\s\S]*?)"\s*(,|\})/i);
   if (!match) return null;
 
-  let extracted = match[1];
+  return unescapeCommon(match[1]).trim();
+};
 
-  extracted = extracted
-    .replace(/\\n/g, "\n")
-    .replace(/\\"/g, '"')
-    .replace(/\\t/g, "\t");
+const cleanupWeirdMixedOutput = (str) => {
+  if (typeof str !== "string") return "";
 
-  return extracted.trim();
+  let s = str.trim();
+
+  // If response starts with a JSON blob then markdown after it, remove the JSON blob section
+  // Example: { ... }\n\n### Something
+  if (s.startsWith("{") && s.includes("}\n")) {
+    const idx = s.indexOf("}\n");
+    const after = s.slice(idx + 2).trim();
+    if (after) s = after;
+  }
+
+  // remove accidental surrounding quotes
+  if (
+    (s.startsWith('"') && s.endsWith('"')) ||
+    (s.startsWith("'") && s.endsWith("'"))
+  ) {
+    s = s.slice(1, -1);
+  }
+
+  // fix escaped markdown in plain string
+  s = unescapeCommon(s);
+
+  return s.trim();
+};
+
+const normalizeToMarkdownString = (content) => {
+  if (!content) return "";
+
+  // Case 1: already object (API returns object)
+  if (typeof content === "object") {
+    return objectToMarkdown(content);
+  }
+
+  // Case 2: string content
+  if (typeof content === "string") {
+    const raw = content.trim();
+    if (!raw) return "";
+
+    // 1) if JSON or JSON fenced
+    const parsedJson = safeJsonParse(raw);
+    if (parsedJson) {
+      // string itself inside json (rare)
+      if (typeof parsedJson === "string") return parsedJson;
+
+      // primary field
+      if (typeof parsedJson.explanation === "string") {
+        return cleanupWeirdMixedOutput(parsedJson.explanation);
+      }
+
+      // sometimes API may use another key
+      if (typeof parsedJson.content === "string") {
+        return cleanupWeirdMixedOutput(parsedJson.content);
+      }
+
+      return objectToMarkdown(parsedJson);
+    }
+
+    // 2) json-like extraction from string
+    if (raw.includes('"explanation"')) {
+      const extracted = extractExplanationFromJsonLikeString(raw);
+      if (extracted) return cleanupWeirdMixedOutput(extracted);
+    }
+
+    // 3) fallback cleanup (handles escaped markdown, mixed garbage etc.)
+    return cleanupWeirdMixedOutput(raw);
+  }
+
+  return "";
 };
 
 const AIResponsePreview = ({ content }) => {
   if (!content) return null;
 
   const normalizedContent = useMemo(() => {
-    if (typeof content === "object") {
-      return objectToMarkdown(content);
-    }
-
-    if (typeof content === "string") {
-      const trimmed = content.trim();
-
-      // If it contains explanation key, try extracting only the explanation
-      if (trimmed.includes('"explanation"')) {
-        const extracted = extractExplanationFromJsonLikeString(trimmed);
-        if (extracted) return extracted;
-      }
-
-      // If looks like JSON, try to parse normally
-      if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
-        try {
-          const parsed = JSON.parse(trimmed);
-          return objectToMarkdown(parsed);
-        } catch {
-          // ignore
-        }
-      }
-
-      // Defensive cleanup: remove JSON header at start if present
-      if (trimmed.startsWith("{") && trimmed.includes("}\n")) {
-        const idx = trimmed.indexOf("}\n");
-        if (idx !== -1) {
-          const after = trimmed.slice(idx + 2).trim();
-          if (after) return after;
-        }
-      }
-
-      return content;
-    }
-
-    return "";
+    return normalizeToMarkdownString(content);
   }, [content]);
+
+  if (!normalizedContent) return null;
 
   return (
     <div className="max-w-4xl mx-auto">
