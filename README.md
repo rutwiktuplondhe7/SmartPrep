@@ -37,13 +37,6 @@ The platform is designed to support **both technical and non-technical roles**, 
 
 ---
 
-### 📖 Expandable Q&A Learning Interface
-- Questions are displayed in an accordion-style UI
-- Users can expand/collapse answers for focused study
-- Clean layout to avoid information overload
-
----
-
 ### ✨ On-Demand Concept Explanations (Learn More)
 - Generate deeper explanations for any question using AI
 - Focuses on:
@@ -65,20 +58,9 @@ The platform is designed to support **both technical and non-technical roles**, 
 - Generate and append additional AI-generated questions to an existing session
 - Newly generated questions are stored and treated the same as original ones
 
----
 
-### 💾 Persistent Storage
-- Sessions and questions are stored in MongoDB
-- All data is tied to the authenticated user
-- Supports long-term preparation and revision
 
 ---
-
-### 🎨 Modern, Responsive UI
-- Built with Tailwind CSS
-- Responsive across devices
-- Minimal, distraction-free interface focused on learning
-
 
 
 ## 🛠 Setup & Environment Configuration
