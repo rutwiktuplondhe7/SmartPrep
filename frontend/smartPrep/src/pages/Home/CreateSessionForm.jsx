@@ -52,13 +52,20 @@ const CreateSessionForm = () => {
     setIsLoading(true);
 
     try {
-      const aiResponse = await axiosInstance.post(API_PATHS.AI.GENERATE_QUESTIONS, {
-        role,
-        experience,
-        topicsToFocus,
-        numbersOfQuestions: 7,
-        purpose: "createSession",
-      });
+     const topicsArray = topicsToFocus.split(",").map(t => t.trim()).filter(Boolean);
+     
+     const aiResponse = await axiosInstance.post(API_PATHS.AI.GENERATE_QUESTIONS, {
+                role,
+                experience,
+                topicsToFocus: topicsArray,
+                description: formData.description,
+                numbersOfQuestions: 5,
+                purpose: "createSession",
+      }
+
+    
+    
+    );
 
       const generateQuestions = aiResponse.data;
 
