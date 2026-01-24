@@ -26,10 +26,11 @@ const ProfileInfoCard = () => {
             e.currentTarget.src = DEFAULT_PROFILE_IMG
           }}
         />
+
         <div>
           <div className="text-[15px] text-black font-bold leading-3">
             {user?.name || ""}
-          </div>
+        </div>
 
          
           <button
@@ -38,6 +39,7 @@ const ProfileInfoCard = () => {
           >
             Logout
           </button>
+          
         </div>
       </div>
     )
