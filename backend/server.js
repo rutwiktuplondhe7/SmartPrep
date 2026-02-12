@@ -8,6 +8,7 @@ const app = express();
 app.set("trust proxy", 1);
 
 const authRoutes = require("./routes/authRoutes");
+const interviewRoutes = require("./routes/interviewRoute");
 const sessionRoutes = require("./routes/sessionRoutes");
 const questionRoutes = require("./routes/questionRoutes");
 const { protect } = require("./middlewares/authMiddleware");
@@ -49,6 +50,8 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/sessions", sessionRoutes);
 app.use("/api/questions", questionRoutes);
+app.use("/api/interview", interviewRoutes);
+
 
 app.use("/api/ai/generate-questions", protect, generateInterviewQuestions);
 app.use("/api/ai/generate-explanation", protect, generateConceptExplanation);

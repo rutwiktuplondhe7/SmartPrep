@@ -75,7 +75,7 @@ const CreateSessionForm = () => {
       });
 
       if (response.data?.session?._id) {
-        navigate(`/interview-prep/${response.data?.session._id}`);
+        navigate(`/mock-interview/${response.data?.session._id}`);
       }
     } catch (err) {
       setError(

@@ -26,7 +26,9 @@ const AI_USAGE_LIMITS = {
 const PREVIEW_LIMIT_MESSAGE =
   "SmartPrep is running on limited free AI capacity. You’ve reached the free preview limit for this feature.";
 
-// AI CALL HELPER WITH RETRY
+/*
+  RETRY LOGIC
+*/
 const callAIWithRetry = async (payload, headers) => {
   try {
     return await axios.post(OPENROUTER_URL, payload, { headers });
@@ -39,7 +41,9 @@ const callAIWithRetry = async (payload, headers) => {
   }
 };
 
-// fast pre-check (prevents wasting OpenRouter calls)
+/*
+  PRE-CHECK USAGE
+*/
 const preCheckUsage = async ({ userId, action }) => {
   const limit = AI_USAGE_LIMITS[action];
   if (!limit) return;
@@ -57,7 +61,9 @@ const preCheckUsage = async ({ userId, action }) => {
   }
 };
 
-// increment only after successful AI response
+/*
+  INCREMENT USAGE
+*/
 const incrementUsageAfterSuccess = async ({ userId, action }) => {
   const limit = AI_USAGE_LIMITS[action];
   if (!limit) return;
@@ -68,7 +74,89 @@ const incrementUsageAfterSuccess = async ({ userId, action }) => {
   );
 };
 
-//@route POST /api/ai/generate-questions
+/*
+  🔥 REUSABLE AI GENERATION CORE
+  Used by:
+  - generateInterviewQuestions route
+  - loadMoreQuestions inside interviewController
+*/
+const generateQuestionsCore = async ({
+  role,
+  experience,
+  topicsToFocus,
+  description,
+  numbersOfQuestions,
+  userId,
+  action,
+}) => {
+
+  if (userId) {
+    await preCheckUsage({ userId, action });
+  }
+
+  const safeRole = role.slice(0, LIMITS.ROLE_CHARS);
+  const safeExperience = experience.toString().slice(0, LIMITS.EXPERIENCE_CHARS);
+
+  const safeTopics = Array.isArray(topicsToFocus)
+    ? topicsToFocus
+        .filter((t) => typeof t === "string" && t.trim().length > 0)
+        .slice(0, LIMITS.MAX_TOPICS)
+        .map((t) => t.slice(0, LIMITS.TOPIC_CHARS))
+    : [];
+
+  const safeDescription = description
+    ? description.slice(0, LIMITS.DESCRIPTION_CHARS)
+    : "";
+
+  const safeQuestionCount = Math.min(
+    Number(numbersOfQuestions),
+    LIMITS.MAX_QUESTIONS
+  );
+
+  let prompt = questionAnswerPrompt(
+    safeRole,
+    safeExperience,
+    safeTopics,
+    safeDescription,
+    safeQuestionCount
+  );
+
+  if (prompt.length > LIMITS.MAX_PROMPT_CHARS) {
+    prompt = prompt.slice(0, LIMITS.MAX_PROMPT_CHARS);
+  }
+
+  const payload = {
+    model: "openai/gpt-3.5-turbo",
+    temperature: 0.6,
+    messages: [{ role: "user", content: prompt }],
+  };
+
+  const headers = {
+    Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+    "Content-Type": "application/json",
+  };
+
+  const response = await callAIWithRetry(payload, headers);
+
+  const rawText = response.data.choices[0].message.content;
+
+  const cleanedText = rawText
+    .replace(/^```json\s*/i, "")
+    .replace(/```$/i, "")
+    .trim();
+
+  const data = JSON.parse(cleanedText);
+
+  if (userId) {
+    await incrementUsageAfterSuccess({ userId, action });
+  }
+
+  return data;
+};
+
+/*
+  ROUTE: POST /api/ai/generate-questions
+*/
 const generateInterviewQuestions = async (req, res) => {
   try {
     const {
@@ -85,69 +173,19 @@ const generateInterviewQuestions = async (req, res) => {
     }
 
     const action =
-      purpose === "loadMoreQuestions" ? "loadMoreQuestions" : "createSession";
+      purpose === "loadMoreQuestions"
+        ? "loadMoreQuestions"
+        : "createSession";
 
-    if (req.user?.id) {
-      await preCheckUsage({ userId: req.user.id, action });
-    }
-
-    const safeRole = role.slice(0, LIMITS.ROLE_CHARS);
-    const safeExperience = experience
-      .toString()
-      .slice(0, LIMITS.EXPERIENCE_CHARS);
-
-    const safeTopics = Array.isArray(topicsToFocus)
-      ? topicsToFocus
-          .filter((t) => typeof t === "string" && t.trim().length > 0)
-          .slice(0, LIMITS.MAX_TOPICS)
-          .map((t) => t.slice(0, LIMITS.TOPIC_CHARS))
-      : [];
-
-    const safeDescription = description
-      ? description.slice(0, LIMITS.DESCRIPTION_CHARS)
-      : "";
-
-    const safeQuestionCount = Math.min(
-      Number(numbersOfQuestions),
-      LIMITS.MAX_QUESTIONS
-    );
-
-    let prompt = questionAnswerPrompt(
-      safeRole,
-      safeExperience,
-      safeTopics,
-      safeDescription,
-      safeQuestionCount
-    );
-
-    if (prompt.length > LIMITS.MAX_PROMPT_CHARS) {
-      prompt = prompt.slice(0, LIMITS.MAX_PROMPT_CHARS);
-    }
-
-    const payload = {
-      model: "openai/gpt-3.5-turbo",
-      temperature: 0.6,
-      messages: [{ role: "user", content: prompt }],
-    };
-
-    const headers = {
-      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-      "Content-Type": "application/json",
-    };
-
-    const response = await callAIWithRetry(payload, headers);
-
-    const rawText = response.data.choices[0].message.content;
-    const cleanedText = rawText
-      .replace(/^```json\s*/i, "")
-      .replace(/```$/i, "")
-      .trim();
-
-    const data = JSON.parse(cleanedText);
-
-    if (req.user?.id) {
-      await incrementUsageAfterSuccess({ userId: req.user.id, action });
-    }
+    const data = await generateQuestionsCore({
+      role,
+      experience,
+      topicsToFocus,
+      description,
+      numbersOfQuestions,
+      userId: req.user?.id,
+      action,
+    });
 
     return res.status(200).json(data);
   } catch (error) {
@@ -161,13 +199,16 @@ const generateInterviewQuestions = async (req, res) => {
     }
 
     console.error("AI ERROR:", error.message);
+
     return res.status(500).json({
       message: "AI service temporarily unavailable.",
     });
   }
 };
 
-//@route POST /api/ai/generate-explanation
+/*
+  ROUTE: POST /api/ai/generate-explanation
+*/
 const generateConceptExplanation = async (req, res) => {
   try {
     const { question, answer } = req.body;
@@ -225,12 +266,9 @@ const generateConceptExplanation = async (req, res) => {
       });
     }
 
+    if (!parsed.title) parsed.title = "Concept Explanation";
     if (typeof parsed.explanation !== "string") {
       parsed.explanation = JSON.stringify(parsed.explanation, null, 2);
-    }
-
-    if (!parsed.title) {
-      parsed.title = "Concept Explanation";
     }
 
     if (req.user?.id) {
@@ -241,6 +279,7 @@ const generateConceptExplanation = async (req, res) => {
     }
 
     return res.status(200).json(parsed);
+
   } catch (error) {
     const status = error.statusCode || 500;
 
@@ -252,6 +291,7 @@ const generateConceptExplanation = async (req, res) => {
     }
 
     console.error("EXPLANATION AI ERROR:", error.message);
+
     return res.status(500).json({
       message: "AI service temporarily unavailable.",
     });
@@ -261,4 +301,5 @@ const generateConceptExplanation = async (req, res) => {
 module.exports = {
   generateInterviewQuestions,
   generateConceptExplanation,
+  generateQuestionsCore, // 🔥 reusable helper
 };

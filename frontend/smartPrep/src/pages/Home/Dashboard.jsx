@@ -73,7 +73,7 @@ const Dashboard = () => {
                     : ""
                 }
                 onSelect={() => {
-                  navigate(`/interview-prep/${data?._id}`);
+                  navigate(`/summary/${data?._id}`);
                 }}
                 onDelete={() => {
                   setOpenDeleteAlert({

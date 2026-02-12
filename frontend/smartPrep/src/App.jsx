@@ -7,6 +7,10 @@ import Dashboard from "./pages/Home/Dashboard";
 import InterviewPrep from "./pages/InterviewPrep/InterviewPrep";
 import UserProvider from './context/userContext';
 
+import MockInterview from "./pages/InterviewPrep/MockInterview";
+import SummaryPage from "./pages/SummaryPage";
+
+
 const App = () => {
   return (
     <UserProvider>
@@ -15,7 +19,9 @@ const App = () => {
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/interview-prep/:sessionId" element={<InterviewPrep />} />
+            <Route path="/mock-interview/:sessionId" element={<MockInterview />} />
+            <Route path="/summary" element={<SummaryPage />} />
+            <Route path="/mock-interview/:sessionId" element={<MockInterview />} />
           </Routes>
         </Router>
 
