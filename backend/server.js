@@ -11,6 +11,7 @@ const authRoutes = require("./routes/authRoutes");
 const interviewRoutes = require("./routes/interviewRoute");
 const sessionRoutes = require("./routes/sessionRoutes");
 const questionRoutes = require("./routes/questionRoutes");
+const audioRoutes = require("./routes/audioRoutes");
 const { protect } = require("./middlewares/authMiddleware");
 const {
   generateInterviewQuestions,
@@ -55,6 +56,8 @@ app.use("/api/interview", interviewRoutes);
 
 app.use("/api/ai/generate-questions", protect, generateInterviewQuestions);
 app.use("/api/ai/generate-explanation", protect, generateConceptExplanation);
+app.use("/api/audio", audioRoutes);
+
 
 // Server uploads folder
 app.use("/uploads", express.static(path.join(__dirname, "uploads"), {}));
