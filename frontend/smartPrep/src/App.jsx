@@ -1,29 +1,33 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
+import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
 
 import LandingPage from "./pages/Landingpage";
 import Dashboard from "./pages/Home/Dashboard";
-import InterviewPrep from "./pages/InterviewPrep/InterviewPrep";
-import UserProvider from './context/userContext';
-
 import MockInterview from "./pages/InterviewPrep/MockInterview";
-import SummaryPage from "./pages/SummaryPage";
-
+import Summary from "./pages/InterviewPrep/SummaryPage";
+import UserProvider from "./context/userContext";
 
 const App = () => {
   return (
     <UserProvider>
-      <div>
-        <Router>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/mock-interview/:sessionId" element={<MockInterview />} />
-            <Route path="/summary" element={<SummaryPage />} />
-            <Route path="/mock-interview/:sessionId" element={<MockInterview />} />
-          </Routes>
-        </Router>
+      <Router>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          
+          {/* Interview Flow */}
+          <Route
+            path="/mock-interview/:sessionId"
+            element={<MockInterview />}
+          />
+
+          {/* Summary Page */}
+          <Route
+            path="/summary/:sessionId"
+            element={<Summary />}
+          />
+        </Routes>
 
         <Toaster
           position="top-center"
@@ -37,7 +41,7 @@ const App = () => {
             },
           }}
         />
-      </div>
+      </Router>
     </UserProvider>
   );
 };
