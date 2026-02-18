@@ -18,9 +18,9 @@ const LIMITS = {
 };
 
 const AI_USAGE_LIMITS = {
-  createSession: 2,
-  loadMoreQuestions: 2,
-  learnMore: 1,
+  createSession: 20,
+  loadMoreQuestions: 20,
+  learnMore: 10,
 };
 
 const PREVIEW_LIMIT_MESSAGE =

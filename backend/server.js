@@ -44,7 +44,10 @@ app.use(
 
 connectDB();
 
-// Middleware
+// 🔥 Mount audio route BEFORE body parser
+app.use("/api/audio", audioRoutes);
+
+// JSON middleware AFTER audio
 app.use(express.json());
 
 // Routes
@@ -53,10 +56,9 @@ app.use("/api/sessions", sessionRoutes);
 app.use("/api/questions", questionRoutes);
 app.use("/api/interview", interviewRoutes);
 
-
 app.use("/api/ai/generate-questions", protect, generateInterviewQuestions);
 app.use("/api/ai/generate-explanation", protect, generateConceptExplanation);
-app.use("/api/audio", audioRoutes);
+
 
 
 // Server uploads folder

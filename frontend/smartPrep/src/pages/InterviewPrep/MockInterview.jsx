@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axiosInstance from "../../utils/axiosInstance";
 
@@ -16,6 +16,12 @@ const MockInterview = () => {
     current: 0,
     total: 0,
   });
+
+  // 🎤 Recording states
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
 
   useEffect(() => {
     const startInterview = async () => {
@@ -55,6 +61,77 @@ const MockInterview = () => {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 🎤 Start Recording
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        try {
+          setIsTranscribing(true);
+
+          const audioBlob = new Blob(audioChunksRef.current, {
+            type: "audio/webm",
+          });
+
+          if (audioBlob.size === 0) {
+            console.warn("Empty audio blob");
+            setIsTranscribing(false);
+            return;
+          }
+
+          const formData = new FormData();
+          formData.append("audio", audioBlob);
+
+          // ✅ DO NOT manually set Content-Type
+          const res = await axiosInstance.post(
+  "/api/audio/transcribe",
+  formData,
+  {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+  }
+);
+
+
+          if (res.data && res.data.transcript) {
+            setAnswer(res.data.transcript);
+          }
+
+        } catch (err) {
+          console.error("Transcription failed:", err);
+        } finally {
+          setIsTranscribing(false);
+        }
+      };
+
+      recorder.start(100);
+      setIsRecording(true);
+
+    } catch (error) {
+      console.error("Microphone access denied:", error);
+    }
+  };
+
+  // 🎤 Stop Recording
+  const stopRecording = () => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
     }
   };
 
@@ -129,7 +206,6 @@ const MockInterview = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center py-10 px-4">
-      {/* Header */}
       <div className="w-full max-w-3xl mb-8">
         <h1 className="text-2xl font-bold text-gray-800">
           SmartPrep Interview Simulator
@@ -149,12 +225,11 @@ const MockInterview = () => {
             <div
               className="bg-black h-2 rounded-full transition-all duration-300"
               style={{ width: `${progressPercent}%` }}
-            ></div>
+            />
           </div>
         </div>
       </div>
 
-      {/* Content */}
       <div className="w-full max-w-3xl bg-white shadow-md rounded-xl p-8">
         {loading && (
           <div className="text-center text-lg font-medium">
@@ -173,11 +248,37 @@ const MockInterview = () => {
               onChange={(e) => setAnswer(e.target.value)}
               rows={6}
               className="w-full border border-gray-300 rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-black transition"
-              placeholder="Type your answer here..."
+              placeholder="Type your answer here or use mic..."
             />
 
             <div className="text-xs text-gray-500 mt-1">
               {answer.length} characters
+            </div>
+
+            {/* 🎤 Mic Section */}
+            <div className="mt-4">
+              {!isRecording ? (
+                <button
+                  onClick={startRecording}
+                  disabled={isTranscribing}
+                  className="bg-gray-800 text-white px-4 py-2 rounded-lg hover:opacity-90 transition"
+                >
+                  🎤 Start Recording
+                </button>
+              ) : (
+                <button
+                  onClick={stopRecording}
+                  className="bg-red-600 text-white px-4 py-2 rounded-lg hover:opacity-90 transition"
+                >
+                  ⏹ Stop Recording
+                </button>
+              )}
+
+              {isTranscribing && (
+                <p className="text-sm text-gray-500 mt-2">
+                  Transcribing...
+                </p>
+              )}
             </div>
 
             {scores && (
@@ -189,7 +290,7 @@ const MockInterview = () => {
 
             <button
               onClick={handleNext}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isTranscribing}
               className="mt-6 w-full bg-black text-white py-3 rounded-lg font-medium hover:opacity-90 transition"
             >
               {isSubmitting ? "Submitting..." : "Next Question"}
