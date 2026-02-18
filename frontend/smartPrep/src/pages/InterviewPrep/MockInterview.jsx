@@ -12,16 +12,16 @@ const MockInterview = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [endOfInterview, setEndOfInterview] = useState(false);
   const [scores, setScores] = useState(null);
-  const [progress, setProgress] = useState({
-    current: 0,
-    total: 0,
-  });
+  const [progress, setProgress] = useState({ current: 0, total: 0 });
 
-  // 🎤 Recording states
+  // 🎤 Recording States
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const timerRef = useRef(null);
 
   useEffect(() => {
     const startInterview = async () => {
@@ -54,6 +54,7 @@ const MockInterview = () => {
 
       if (res.data.endOfInterview) {
         setEndOfInterview(true);
+        setQuestion(null);
       } else {
         setQuestion(res.data);
       }
@@ -64,14 +65,22 @@ const MockInterview = () => {
     }
   };
 
-  // 🎤 Start Recording
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+  };
+
   const startRecording = async () => {
+    if (isRecording || isTranscribing) return;
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
       const recorder = new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
       audioChunksRef.current = [];
+      setRecordingTime(0);
 
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -80,6 +89,9 @@ const MockInterview = () => {
       };
 
       recorder.onstop = async () => {
+        clearInterval(timerRef.current);
+        setIsRecording(false);
+
         try {
           setIsTranscribing(true);
 
@@ -87,31 +99,19 @@ const MockInterview = () => {
             type: "audio/webm",
           });
 
-          if (audioBlob.size === 0) {
-            console.warn("Empty audio blob");
-            setIsTranscribing(false);
-            return;
-          }
+          if (!audioBlob.size) return;
 
           const formData = new FormData();
           formData.append("audio", audioBlob);
 
-          // ✅ DO NOT manually set Content-Type
           const res = await axiosInstance.post(
-  "/api/audio/transcribe",
-  formData,
-  {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
-  }
-);
+            "/api/audio/transcribe",
+            formData
+          );
 
-
-          if (res.data && res.data.transcript) {
+          if (res.data?.transcript) {
             setAnswer(res.data.transcript);
           }
-
         } catch (err) {
           console.error("Transcription failed:", err);
         } finally {
@@ -119,20 +119,21 @@ const MockInterview = () => {
         }
       };
 
-      recorder.start(100);
+      recorder.start(200);
       setIsRecording(true);
+
+      timerRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
 
     } catch (error) {
       console.error("Microphone access denied:", error);
     }
   };
 
-  // 🎤 Stop Recording
   const stopRecording = () => {
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-    }
+    if (!mediaRecorderRef.current || !isRecording) return;
+    mediaRecorderRef.current.stop();
   };
 
   const handleNext = async () => {
@@ -158,7 +159,6 @@ const MockInterview = () => {
         setQuestion(null);
       } else {
         setQuestion(res.data.nextQuestion);
-
         setProgress((prev) => ({
           ...prev,
           current: prev.current + 1,
@@ -206,34 +206,26 @@ const MockInterview = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center py-10 px-4">
-      <div className="w-full max-w-3xl mb-8">
-        <h1 className="text-2xl font-bold text-gray-800">
-          SmartPrep Interview Simulator
-        </h1>
-
-        <div className="mt-4">
-          <div className="flex justify-between text-sm text-gray-600 mb-1">
-            <span>
-              Question {progress.current} of {progress.total}
-            </span>
-            <span>
-              {Math.round(progressPercent)}% Complete
-            </span>
-          </div>
-
-          <div className="w-full bg-gray-200 h-2 rounded-full">
-            <div
-              className="bg-black h-2 rounded-full transition-all duration-300"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
+      <div className="w-full max-w-3xl mb-6">
+        <div className="flex justify-between text-sm text-gray-600 mb-2">
+          <span>
+            Question {progress.current} of {progress.total}
+          </span>
+          <span>{Math.round(progressPercent)}% Complete</span>
+        </div>
+        <div className="w-full bg-gray-200 h-2 rounded-full">
+          <div
+            className="bg-black h-2 rounded-full transition-all duration-300"
+            style={{ width: `${progressPercent}%` }}
+          />
         </div>
       </div>
 
       <div className="w-full max-w-3xl bg-white shadow-md rounded-xl p-8">
+
         {loading && (
-          <div className="text-center text-lg font-medium">
-            Preparing next question...
+          <div className="text-center font-medium">
+            Loading...
           </div>
         )}
 
@@ -256,37 +248,39 @@ const MockInterview = () => {
             </div>
 
             {/* 🎤 Mic Section */}
-            <div className="mt-4">
+            <div className="mt-6 flex flex-col items-center">
               {!isRecording ? (
                 <button
                   onClick={startRecording}
                   disabled={isTranscribing}
-                  className="bg-gray-800 text-white px-4 py-2 rounded-lg hover:opacity-90 transition"
+                  className={`px-6 py-3 rounded-full text-white font-semibold transition ${
+                    isTranscribing
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-black hover:opacity-90"
+                  }`}
                 >
                   🎤 Start Recording
                 </button>
               ) : (
-                <button
-                  onClick={stopRecording}
-                  className="bg-red-600 text-white px-4 py-2 rounded-lg hover:opacity-90 transition"
-                >
-                  ⏹ Stop Recording
-                </button>
+                <div className="flex flex-col items-center">
+                  <button
+                    onClick={stopRecording}
+                    className="px-6 py-3 rounded-full bg-red-600 text-white font-semibold animate-pulse"
+                  >
+                    ⏹ Stop Recording
+                  </button>
+                  <span className="mt-2 text-red-600 font-medium">
+                    Recording... {formatTime(recordingTime)}
+                  </span>
+                </div>
               )}
 
               {isTranscribing && (
-                <p className="text-sm text-gray-500 mt-2">
-                  Transcribing...
-                </p>
+                <span className="mt-3 text-sm text-gray-500">
+                  Transcribing audio...
+                </span>
               )}
             </div>
-
-            {scores && (
-              <div className="mt-4 text-sm text-gray-600">
-                Last Response → Confidence: {scores.confidence} |
-                Clarity: {scores.clarity}
-              </div>
-            )}
 
             <button
               onClick={handleNext}
@@ -299,8 +293,8 @@ const MockInterview = () => {
         )}
 
         {!loading && endOfInterview && (
-          <div className="text-center">
-            <h2 className="text-xl font-bold mb-6 text-gray-800">
+          <div className="text-center mt-6">
+            <h2 className="text-xl font-bold mb-6">
               You've completed the current set of questions
             </h2>
 
