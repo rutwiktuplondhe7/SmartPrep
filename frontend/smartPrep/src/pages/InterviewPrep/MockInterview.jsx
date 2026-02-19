@@ -11,18 +11,23 @@ const MockInterview = () => {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [endOfInterview, setEndOfInterview] = useState(false);
-  const [scores, setScores] = useState(null);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
 
-  // 🎤 Recording States
+  // 🎤 Recording
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+
+  // 🔊 Speaking animation
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const timerRef = useRef(null);
 
+  // =============================
+  // 🚀 START INTERVIEW
+  // =============================
   useEffect(() => {
     const startInterview = async () => {
       try {
@@ -44,6 +49,47 @@ const MockInterview = () => {
 
     startInterview();
   }, []);
+
+  // =============================
+  // 🔊 SMART INTERVIEWER VOICE
+  // =============================
+  useEffect(() => {
+    if (!question?.questionText) return;
+
+    window.speechSynthesis.cancel();
+    setIsSpeaking(true);
+
+    const utterance = new SpeechSynthesisUtterance(
+      question.questionText
+    );
+
+    const voices = window.speechSynthesis.getVoices();
+
+    // Prefer English female or neural-sounding voice
+    const preferredVoice =
+      voices.find(v =>
+        v.lang.toLowerCase().includes("en") &&
+        v.name.toLowerCase().includes("female")
+      ) ||
+      voices.find(v => v.lang.toLowerCase().includes("en"));
+
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    }
+
+    utterance.rate = 0.95;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
+    utterance.onend = () => {
+      setIsSpeaking(false);
+    };
+
+    setTimeout(() => {
+      window.speechSynthesis.speak(utterance);
+    }, 400);
+
+  }, [question]);
 
   const loadCurrentQuestion = async () => {
     try {
@@ -71,6 +117,9 @@ const MockInterview = () => {
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
+  // =============================
+  // 🎤 RECORDING
+  // =============================
   const startRecording = async () => {
     if (isRecording || isTranscribing) return;
 
@@ -123,7 +172,7 @@ const MockInterview = () => {
       setIsRecording(true);
 
       timerRef.current = setInterval(() => {
-        setRecordingTime((prev) => prev + 1);
+        setRecordingTime(prev => prev + 1);
       }, 1000);
 
     } catch (error) {
@@ -147,11 +196,6 @@ const MockInterview = () => {
         transcript: answer,
       });
 
-      setScores({
-        confidence: res.data.confidenceScore,
-        clarity: res.data.clarityScore,
-      });
-
       setAnswer("");
 
       if (res.data.endOfInterview) {
@@ -159,7 +203,7 @@ const MockInterview = () => {
         setQuestion(null);
       } else {
         setQuestion(res.data.nextQuestion);
-        setProgress((prev) => ({
+        setProgress(prev => ({
           ...prev,
           current: prev.current + 1,
         }));
@@ -188,10 +232,11 @@ const MockInterview = () => {
       setEndOfInterview(false);
       await loadCurrentQuestion();
 
-      setProgress((prev) => ({
+      setProgress(prev => ({
         ...prev,
         total: prev.total + 5,
       }));
+
     } catch (err) {
       console.error(err);
     } finally {
@@ -206,6 +251,8 @@ const MockInterview = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center py-10 px-4">
+      
+      {/* Progress Bar */}
       <div className="w-full max-w-3xl mb-6">
         <div className="flex justify-between text-sm text-gray-600 mb-2">
           <span>
@@ -223,91 +270,78 @@ const MockInterview = () => {
 
       <div className="w-full max-w-3xl bg-white shadow-md rounded-xl p-8">
 
-        {loading && (
-          <div className="text-center font-medium">
-            Loading...
-          </div>
-        )}
-
         {!loading && question && !endOfInterview && (
           <>
-            <h2 className="text-xl font-semibold mb-6 text-gray-800">
+            <h2 className="text-xl font-semibold mb-4 text-gray-800">
               {question.questionText}
             </h2>
+
+            {/* 🔊 Waveform Animation */}
+            {isSpeaking && (
+              <div className="flex justify-center mb-6">
+                <div className="flex gap-1 items-end h-6">
+                  {[...Array(5)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="w-1.5 bg-indigo-600 animate-pulse"
+                      style={{
+                        height: `${10 + Math.random() * 20}px`,
+                        animationDelay: `${i * 0.2}s`
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
 
             <textarea
               value={answer}
               onChange={(e) => setAnswer(e.target.value)}
               rows={6}
-              className="w-full border border-gray-300 rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-black transition"
+              className="w-full border border-gray-300 rounded-lg p-4"
               placeholder="Type your answer here or use mic..."
             />
 
-            <div className="text-xs text-gray-500 mt-1">
-              {answer.length} characters
-            </div>
-
-            {/* 🎤 Mic Section */}
             <div className="mt-6 flex flex-col items-center">
               {!isRecording ? (
                 <button
                   onClick={startRecording}
                   disabled={isTranscribing}
-                  className={`px-6 py-3 rounded-full text-white font-semibold transition ${
-                    isTranscribing
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-black hover:opacity-90"
-                  }`}
+                  className="px-6 py-3 rounded-full bg-black text-white"
                 >
                   🎤 Start Recording
                 </button>
               ) : (
-                <div className="flex flex-col items-center">
-                  <button
-                    onClick={stopRecording}
-                    className="px-6 py-3 rounded-full bg-red-600 text-white font-semibold animate-pulse"
-                  >
-                    ⏹ Stop Recording
-                  </button>
-                  <span className="mt-2 text-red-600 font-medium">
-                    Recording... {formatTime(recordingTime)}
-                  </span>
-                </div>
-              )}
-
-              {isTranscribing && (
-                <span className="mt-3 text-sm text-gray-500">
-                  Transcribing audio...
-                </span>
+                <button
+                  onClick={stopRecording}
+                  className="px-6 py-3 rounded-full bg-red-600 text-white animate-pulse"
+                >
+                  ⏹ Stop Recording ({formatTime(recordingTime)})
+                </button>
               )}
             </div>
 
             <button
               onClick={handleNext}
               disabled={isSubmitting || isTranscribing}
-              className="mt-6 w-full bg-black text-white py-3 rounded-lg font-medium hover:opacity-90 transition"
+              className="mt-6 w-full bg-black text-white py-3 rounded-lg"
             >
-              {isSubmitting ? "Submitting..." : "Next Question"}
+              Next Question
             </button>
           </>
         )}
 
         {!loading && endOfInterview && (
           <div className="text-center mt-6">
-            <h2 className="text-xl font-bold mb-6">
-              You've completed the current set of questions
-            </h2>
-
             <button
               onClick={handleLoadMore}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium mb-4 hover:opacity-90 transition"
+              className="w-full bg-blue-600 text-white py-3 rounded-lg mb-4"
             >
               Load More Questions
             </button>
-
             <button
               onClick={handleFinish}
-              className="w-full bg-green-600 text-white py-3 rounded-lg font-medium hover:opacity-90 transition"
+              className="w-full bg-green-600 text-white py-3 rounded-lg"
             >
               Finish Interview
             </button>
