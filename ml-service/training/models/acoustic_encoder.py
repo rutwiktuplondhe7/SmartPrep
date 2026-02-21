@@ -1,0 +1,44 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class AcousticEncoder(nn.Module):
+    def __init__(self, num_classes=8, embedding_dim=128):
+        super(AcousticEncoder, self).__init__()
+
+        self.features = nn.Sequential(
+            nn.Conv2d(1, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            nn.MaxPool2d(2)
+        )
+
+        self.global_pool = nn.AdaptiveAvgPool2d((1, 1))
+
+        self.embedding = nn.Linear(128, embedding_dim)
+
+        self.classifier = nn.Linear(embedding_dim, num_classes)
+
+    def forward(self, x, return_embedding=False):
+
+        x = self.features(x)
+        x = self.global_pool(x)
+        x = x.view(x.size(0), -1)
+
+        embedding = self.embedding(x)
+
+        if return_embedding:
+            return embedding
+
+        out = self.classifier(embedding)
+        return out

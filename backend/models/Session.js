@@ -6,18 +6,39 @@ const answerSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Question",
     },
+
     transcript: {
       type: String,
     },
+
     confidenceScore: {
-      type: Number, // 0-100 (dummy for now)
+      type: Number,
     },
+
     clarityScore: {
-      type: Number, // 0-100 (dummy for now)
+      type: Number,
+    },
+
+    // 🔥 NEW RESEARCH FIELDS
+    audioSampleId: {
+      type: String,
+    },
+
+    duration: {
+      type: Number,
+    },
+
+    speakingRate: {
+      type: Number,
+    },
+
+    rmsEnergy: {
+      type: Number,
     },
   },
   { timestamps: true }
 );
+
 
 const sessionSchema = new mongoose.Schema(
   {

@@ -77,10 +77,16 @@ exports.getCurrentQuestion = async (req, res) => {
 
 
 
-// 3️⃣ Submit Answer + Auto Advance (Final Safe Version)
 exports.submitAnswer = async (req, res) => {
   try {
-    const { sessionId, transcript } = req.body;
+    const {
+      sessionId,
+      transcript,
+      sampleId,
+      features,
+      confidenceScore,
+      clarityScore,
+    } = req.body;
 
     const session = await Session.findById(sessionId);
 
@@ -110,22 +116,28 @@ exports.submitAnswer = async (req, res) => {
 
     const currentQuestionId = session.questions[index];
 
-    // 🔥 Temporary Dummy Scores (ML will replace later)
-    const confidenceScore = Math.floor(Math.random() * 41) + 60;
-    const clarityScore = Math.floor(Math.random() * 41) + 60;
+    // 🔥 SAFE SCORE HANDLING
+    const safeConfidence =
+      typeof confidenceScore === "number" ? confidenceScore : null;
 
-    // Save Answer
+    const safeClarity =
+      typeof clarityScore === "number" ? clarityScore : null;
+
     session.answers.push({
       question: currentQuestionId,
       transcript: transcript.trim(),
-      confidenceScore,
-      clarityScore,
+      confidenceScore: safeConfidence,
+      clarityScore: safeClarity,
+
+      audioSampleId: sampleId || null,
+      duration: features?.duration || null,
+      speakingRate: features?.speaking_rate || null,
+      rmsEnergy: features?.rms_energy || null,
     });
 
-    // Move pointer
     session.currentQuestionIndex += 1;
 
-    let hasNextQuestion =
+    const hasNextQuestion =
       session.currentQuestionIndex < session.questions.length;
 
     let nextQuestion = null;
@@ -136,12 +148,6 @@ exports.submitAnswer = async (req, res) => {
 
       const questionDoc = await Question.findById(nextQuestionId);
 
-      if (!questionDoc) {
-        return res.status(500).json({
-          message: "Next question not found",
-        });
-      }
-
       nextQuestion = {
         questionId: questionDoc._id,
         questionText: questionDoc.question,
@@ -150,15 +156,14 @@ exports.submitAnswer = async (req, res) => {
 
     await session.save();
 
-    // 🔥 Important: Do NOT mark interview completed here
-
     return res.json({
-      confidenceScore,
-      clarityScore,
+      confidenceScore: safeConfidence,
+      clarityScore: safeClarity,
       hasNextQuestion,
       nextQuestion,
-      endOfInterview: !hasNextQuestion,  // 🔥 Very important
+      endOfInterview: !hasNextQuestion,
     });
+
   } catch (error) {
     console.error("Submit error:", error);
     res.status(500).json({ message: "Server error" });
@@ -200,7 +205,7 @@ exports.getInterviewSummary = async (req, res) => {
 
     const session = await Session.findById(sessionId)
       .populate("questions")
-      .populate("answers.question"); // 🔥 Important improvement
+      .populate("answers.question");
 
     if (!session) {
       return res.status(404).json({ message: "Session not found" });
@@ -220,26 +225,45 @@ exports.getInterviewSummary = async (req, res) => {
       });
     }
 
-    const totalConfidence = answers.reduce(
-      (sum, ans) => sum + ans.confidenceScore,
-      0
+    // 🔥 Only include answers that have AI scores
+    const scoredAnswers = answers.filter(
+      (ans) =>
+        typeof ans.confidenceScore === "number" &&
+        typeof ans.clarityScore === "number"
     );
 
-    const totalClarity = answers.reduce(
-      (sum, ans) => sum + ans.clarityScore,
-      0
-    );
+    let averageConfidence = 0;
+    let averageClarity = 0;
 
-    const averageConfidence = Math.round(totalConfidence / totalAnswered);
-    const averageClarity = Math.round(totalClarity / totalAnswered);
+    if (scoredAnswers.length > 0) {
+      const totalConfidence = scoredAnswers.reduce(
+        (sum, ans) => sum + ans.confidenceScore,
+        0
+      );
+
+      const totalClarity = scoredAnswers.reduce(
+        (sum, ans) => sum + ans.clarityScore,
+        0
+      );
+
+      averageConfidence = (
+        totalConfidence / scoredAnswers.length
+      ).toFixed(2);
+
+      averageClarity = (
+        totalClarity / scoredAnswers.length
+      ).toFixed(2);
+    }
 
     return res.json({
       totalQuestions,
       totalAnswered,
+      evaluatedAnswers: scoredAnswers.length,
       averageConfidence,
       averageClarity,
       answers,
     });
+
   } catch (error) {
     console.error("Summary error:", error);
     res.status(500).json({ message: "Server error" });

@@ -26,3 +26,18 @@ uploads/
 .DS_Store
 .vscode/
 .idea/
+
+# ML datasets
+ml-service/datasets/
+
+# Research dataset collection
+data_collection/
+
+__pycache__/
+*.pyc
+
+# Python virtual environment
+ml-service/venv
+
+# Trained model weights
+ml-service/models/*.pt

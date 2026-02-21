@@ -2,13 +2,17 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axiosInstance from "../../utils/axiosInstance";
 
-/* 🔵 Polished Circular Chart */
+/* 🔵 Circular Chart */
 const CircularProgress = ({ value, label, gradientId }) => {
   const radius = 90;
   const stroke = 14;
   const normalizedRadius = radius - stroke / 2;
   const circumference = normalizedRadius * 2 * Math.PI;
-  const offset = circumference - (value / 100) * circumference;
+
+  // 1–5 scale → percentage
+  const numericValue = Number(value) || 0;
+  const percent = (numericValue / 5) * 100;
+  const offset = circumference - (percent / 100) * circumference;
 
   return (
     <div className="relative flex items-center justify-center">
@@ -43,10 +47,9 @@ const CircularProgress = ({ value, label, gradientId }) => {
         />
       </svg>
 
-      {/* Centered Text Fix */}
       <div className="absolute flex flex-col items-center justify-center">
         <span className="text-4xl font-bold text-white leading-none">
-          {value}
+          {Number(value).toFixed(2)}
         </span>
         <span className="text-sm text-gray-400 mt-2">
           {label}
@@ -88,8 +91,6 @@ const Summary = () => {
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-[#0f172a] text-white px-6 py-16">
-
-      {/* Background Gradient Glow */}
       <div className="absolute top-0 left-0 w-full h-[400px] bg-gradient-to-r from-indigo-600/20 via-cyan-500/20 to-purple-600/20 blur-3xl"></div>
 
       <div className="relative max-w-6xl mx-auto">
@@ -99,9 +100,7 @@ const Summary = () => {
           <h1 className="text-5xl font-extrabold bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
             AI Interview Performance Report
           </h1>
-
           <div className="h-1 w-24 bg-gradient-to-r from-indigo-400 to-cyan-400 mt-4 rounded-full"></div>
-
           <p className="text-gray-400 mt-6 text-lg max-w-2xl">
             Comprehensive behavioral intelligence and communication analytics powered by SmartPrep.
           </p>
@@ -111,7 +110,7 @@ const Summary = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-20">
 
           {/* Completion */}
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-10 rounded-3xl shadow-xl hover:shadow-indigo-500/20 transition-all duration-300 text-center">
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-10 rounded-3xl shadow-xl text-center">
             <p className="text-gray-400 mb-4">Completion Rate</p>
             <p className="text-5xl font-bold">
               {totalAnswered}
@@ -122,7 +121,7 @@ const Summary = () => {
           </div>
 
           {/* Confidence */}
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-10 rounded-3xl shadow-xl hover:shadow-indigo-500/20 transition-all duration-300 flex items-center justify-center">
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-10 rounded-3xl flex items-center justify-center">
             <CircularProgress
               value={averageConfidence}
               label="Confidence"
@@ -131,7 +130,7 @@ const Summary = () => {
           </div>
 
           {/* Clarity */}
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-10 rounded-3xl shadow-xl hover:shadow-indigo-500/20 transition-all duration-300 flex items-center justify-center">
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-10 rounded-3xl flex items-center justify-center">
             <CircularProgress
               value={averageClarity}
               label="Clarity"
@@ -140,31 +139,7 @@ const Summary = () => {
           </div>
         </div>
 
-        {/* Insights Card */}
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-12 rounded-3xl shadow-xl mb-20">
-          <h2 className="text-3xl font-semibold mb-10">
-            Performance Insights
-          </h2>
-
-          {[ 
-            { label: "Confidence Level", value: averageConfidence },
-            { label: "Clarity Level", value: averageClarity },
-          ].map((item, index) => (
-            <div key={index} className="mb-8">
-              <p className="text-gray-400 mb-3">
-                {item.label}
-              </p>
-              <div className="w-full bg-gray-800 h-4 rounded-full">
-                <div
-                  className="h-4 rounded-full bg-gradient-to-r from-indigo-500 to-cyan-400 transition-all duration-700"
-                  style={{ width: `${item.value}%` }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Detailed Analysis */}
+        {/* Detailed Breakdown */}
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-12 rounded-3xl shadow-xl">
           <h2 className="text-3xl font-semibold mb-12">
             Detailed Breakdown
@@ -183,6 +158,7 @@ const Summary = () => {
                 {ans.question?.question}
               </p>
 
+              {/* User Answer */}
               <div className="bg-black/30 border border-white/10 p-6 rounded-2xl mb-5">
                 <p className="text-sm text-gray-400 mb-2">
                   Your Response
@@ -192,17 +168,27 @@ const Summary = () => {
                 </p>
               </div>
 
+              {/* Expected Answer */}
+              <div className="bg-indigo-900/30 border border-indigo-500/20 p-6 rounded-2xl mb-5">
+                <p className="text-sm text-indigo-300 mb-2">
+                  Expected Answer
+                </p>
+                <p className="text-gray-200">
+                  {ans.question?.answer || "No reference answer available."}
+                </p>
+              </div>
+
               <div className="flex gap-6 text-gray-400 text-sm">
                 <span>
                   Confidence:{" "}
                   <span className="text-green-400 font-semibold">
-                    {ans.confidenceScore}
+                    {ans.confidenceScore?.toFixed(2)}
                   </span>
                 </span>
                 <span>
                   Clarity:{" "}
                   <span className="text-blue-400 font-semibold">
-                    {ans.clarityScore}
+                    {ans.clarityScore?.toFixed(2)}
                   </span>
                 </span>
               </div>
@@ -210,7 +196,6 @@ const Summary = () => {
           ))}
         </div>
 
-        {/* Action */}
         <div className="text-center mt-20">
           <button
             onClick={() => navigate("/dashboard")}

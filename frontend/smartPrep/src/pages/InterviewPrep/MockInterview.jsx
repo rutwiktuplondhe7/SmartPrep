@@ -21,6 +21,9 @@ const MockInterview = () => {
   // 🔊 Speaking animation
   const [isSpeaking, setIsSpeaking] = useState(false);
 
+  // 🔥 Research Metadata
+  const [audioMeta, setAudioMeta] = useState(null);
+
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const timerRef = useRef(null);
@@ -65,7 +68,6 @@ const MockInterview = () => {
 
     const voices = window.speechSynthesis.getVoices();
 
-    // Prefer English female or neural-sounding voice
     const preferredVoice =
       voices.find(v =>
         v.lang.toLowerCase().includes("en") &&
@@ -160,7 +162,15 @@ const MockInterview = () => {
 
           if (res.data?.transcript) {
             setAnswer(res.data.transcript);
+
+            setAudioMeta({
+              sampleId: res.data.sampleId,
+              features: res.data.features,
+              confidenceScore: res.data.confidenceScore,
+              clarityScore: res.data.clarityScore,
+            });
           }
+
         } catch (err) {
           console.error("Transcription failed:", err);
         } finally {
@@ -185,6 +195,9 @@ const MockInterview = () => {
     mediaRecorderRef.current.stop();
   };
 
+  // =============================
+  // ➡️ SUBMIT ANSWER
+  // =============================
   const handleNext = async () => {
     if (!answer.trim()) return;
 
@@ -194,9 +207,14 @@ const MockInterview = () => {
       const res = await axiosInstance.post("/api/interview/submit", {
         sessionId,
         transcript: answer,
+        sampleId: audioMeta?.sampleId,
+        features: audioMeta?.features,
+        confidenceScore: audioMeta?.confidenceScore,
+        clarityScore: audioMeta?.clarityScore,
       });
 
       setAnswer("");
+      setAudioMeta(null);
 
       if (res.data.endOfInterview) {
         setEndOfInterview(true);
@@ -208,6 +226,7 @@ const MockInterview = () => {
           current: prev.current + 1,
         }));
       }
+
     } catch (err) {
       console.error(err);
     } finally {
@@ -251,7 +270,7 @@ const MockInterview = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center py-10 px-4">
-      
+
       {/* Progress Bar */}
       <div className="w-full max-w-3xl mb-6">
         <div className="flex justify-between text-sm text-gray-600 mb-2">
@@ -276,7 +295,6 @@ const MockInterview = () => {
               {question.questionText}
             </h2>
 
-            {/* 🔊 Waveform Animation */}
             {isSpeaking && (
               <div className="flex justify-center mb-6">
                 <div className="flex gap-1 items-end h-6">
