@@ -20,9 +20,15 @@ const MockInterview = () => {
 
   const [audioMeta, setAudioMeta] = useState(null);
 
+  const [voicesLoaded, setVoicesLoaded] = useState(false);
+  const [selectedVoice, setSelectedVoice] = useState(null);
+
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const timerRef = useRef(null);
+
+  // 🔥 Prevent StrictMode double speech
+  const hasSpokenRef = useRef(false);
 
   // ---------------- START INTERVIEW ----------------
   useEffect(() => {
@@ -47,38 +53,65 @@ const MockInterview = () => {
     startInterview();
   }, []);
 
+  // ---------------- LOAD VOICES ONCE ----------------
+useEffect(() => {
+  const loadVoices = () => {
+    const voices = window.speechSynthesis.getVoices();
+
+    if (voices.length > 0) {
+      const preferred =
+        voices.find(
+          (v) =>
+            v.lang.toLowerCase().includes("en") &&
+            v.name.toLowerCase().includes("female")
+        ) || voices.find((v) => v.lang.toLowerCase().includes("en"));
+
+      setSelectedVoice(preferred || voices[0]);
+      setVoicesLoaded(true);
+
+      // 🔥 PRE-WARM THE SPEECH ENGINE (Fix first-question delay)
+      const warmUp = new SpeechSynthesisUtterance(" ");
+      warmUp.volume = 0;
+      window.speechSynthesis.speak(warmUp);
+      window.speechSynthesis.cancel();
+    }
+  };
+
+  loadVoices();
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+
+  return () => {
+    window.speechSynthesis.onvoiceschanged = null;
+  };
+}, []);
+
   // ---------------- TEXT TO SPEECH ----------------
   useEffect(() => {
-    if (!question?.questionText) return;
+    if (!voicesLoaded || !selectedVoice || !question?.questionText) return;
+
+    if (hasSpokenRef.current) return;
 
     window.speechSynthesis.cancel();
+    hasSpokenRef.current = true;
+
     setIsSpeaking(true);
 
     const utterance = new SpeechSynthesisUtterance(
       question.questionText
     );
 
-    const voices = window.speechSynthesis.getVoices();
-
-    const preferredVoice =
-      voices.find(
-        (v) =>
-          v.lang.toLowerCase().includes("en") &&
-          v.name.toLowerCase().includes("female")
-      ) || voices.find((v) => v.lang.toLowerCase().includes("en"));
-
-    if (preferredVoice) utterance.voice = preferredVoice;
-
+    utterance.voice = selectedVoice;
     utterance.rate = 0.95;
     utterance.pitch = 1;
     utterance.volume = 1;
 
-    utterance.onend = () => setIsSpeaking(false);
+    utterance.onend = () => {
+      setIsSpeaking(false);
+    };
 
-    setTimeout(() => {
-      window.speechSynthesis.speak(utterance);
-    }, 400);
-  }, [question]);
+    window.speechSynthesis.speak(utterance);
+
+  }, [question, voicesLoaded, selectedVoice]);
 
   // ---------------- LOAD QUESTION ----------------
   const loadCurrentQuestion = async () => {
@@ -92,6 +125,7 @@ const MockInterview = () => {
         setEndOfInterview(true);
         setQuestion(null);
       } else {
+        hasSpokenRef.current = false;  // reset speech flag
         setQuestion(res.data);
       }
     } catch (err) {
@@ -151,7 +185,6 @@ const MockInterview = () => {
           if (res.data?.transcript) {
             setAnswer(res.data.transcript);
 
-            // 🔥 STORE RAW ML VALUES (NO 0-100 CONVERSION HERE)
             setAudioMeta({
               sampleId: res.data.sampleId,
               features: res.data.features,
@@ -209,6 +242,7 @@ const MockInterview = () => {
         setEndOfInterview(true);
         setQuestion(null);
       } else {
+        hasSpokenRef.current = false;  // reset speech flag
         setQuestion(res.data);
         setProgress((prev) => ({
           ...prev,
@@ -258,7 +292,6 @@ const MockInterview = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center py-10 px-4">
 
-      {/* Progress Bar */}
       <div className="w-full max-w-3xl mb-6">
         <div className="flex justify-between text-sm text-gray-600 mb-2">
           <span>
