@@ -274,7 +274,7 @@ const MockInterview = () => {
 
   const progressPercent =
     progress.total > 0
-      ? (progress.current / progress.total) * 100
+      ? ((progress.current - 1) / progress.total) * 100
       : 0;
 
   return (
