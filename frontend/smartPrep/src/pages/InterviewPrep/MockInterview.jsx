@@ -26,8 +26,6 @@ const MockInterview = () => {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const timerRef = useRef(null);
-
-  // 🔥 Prevent StrictMode double speech
   const hasSpokenRef = useRef(false);
 
   // ---------------- START INTERVIEW ----------------
@@ -51,44 +49,43 @@ const MockInterview = () => {
     };
 
     startInterview();
-  }, []); 
+  }, []);
 
-  // ---------------- LOAD VOICES ONCE ----------------
-useEffect(() => {
-  const loadVoices = () => {
-    const voices = window.speechSynthesis.getVoices();
+  // ---------------- LOAD VOICES ----------------
+  useEffect(() => {
+    const loadVoices = () => {
+      const voices = window.speechSynthesis.getVoices();
 
-    if (voices.length > 0) {
-      const preferred =
-        voices.find(
-          (v) =>
-            v.lang.toLowerCase().includes("en") &&
-            v.name.toLowerCase().includes("female")
-        ) || voices.find((v) => v.lang.toLowerCase().includes("en"));
+      if (voices.length > 0) {
+        const preferred =
+          voices.find(
+            (v) =>
+              v.lang.toLowerCase().includes("en") &&
+              v.name.toLowerCase().includes("female")
+          ) || voices.find((v) => v.lang.toLowerCase().includes("en"));
 
-      setSelectedVoice(preferred || voices[0]);
-      setVoicesLoaded(true);
+        setSelectedVoice(preferred || voices[0]);
+        setVoicesLoaded(true);
 
-      // 🔥 PRE-WARM THE SPEECH ENGINE (Fix first-question delay)
-      const warmUp = new SpeechSynthesisUtterance(" ");
-      warmUp.volume = 0;
-      window.speechSynthesis.speak(warmUp);
-      window.speechSynthesis.cancel();
-    }
-  };
+        // Pre-warm engine to avoid first-question delay
+        const warmUp = new SpeechSynthesisUtterance(" ");
+        warmUp.volume = 0;
+        window.speechSynthesis.speak(warmUp);
+        window.speechSynthesis.cancel();
+      }
+    };
 
-  loadVoices();
-  window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
 
-  return () => {
-    window.speechSynthesis.onvoiceschanged = null;
-  };
-}, []);
+    return () => {
+      window.speechSynthesis.onvoiceschanged = null;
+    };
+  }, []);
 
   // ---------------- TEXT TO SPEECH ----------------
   useEffect(() => {
     if (!voicesLoaded || !selectedVoice || !question?.questionText) return;
-
     if (hasSpokenRef.current) return;
 
     window.speechSynthesis.cancel();
@@ -105,9 +102,7 @@ useEffect(() => {
     utterance.pitch = 1;
     utterance.volume = 1;
 
-    utterance.onend = () => {
-      setIsSpeaking(false);
-    };
+    utterance.onend = () => setIsSpeaking(false);
 
     window.speechSynthesis.speak(utterance);
 
@@ -117,6 +112,7 @@ useEffect(() => {
   const loadCurrentQuestion = async () => {
     try {
       setLoading(true);
+
       const res = await axiosInstance.get(
         `/api/interview/${sessionId}/current`
       );
@@ -125,7 +121,8 @@ useEffect(() => {
         setEndOfInterview(true);
         setQuestion(null);
       } else {
-        hasSpokenRef.current = false;  // reset speech flag
+        hasSpokenRef.current = false;
+        setEndOfInterview(false);
         setQuestion(res.data);
       }
     } catch (err) {
@@ -217,7 +214,7 @@ useEffect(() => {
 
   // ---------------- SUBMIT ANSWER ----------------
   const handleNext = async () => {
-    if (!answer.trim()) return;
+    if (!answer.trim() || isTranscribing) return;
 
     try {
       setIsSubmitting(true);
@@ -234,21 +231,12 @@ useEffect(() => {
       setAnswer("");
       setAudioMeta(null);
 
-      const res = await axiosInstance.get(
-        `/api/interview/${sessionId}/current`
-      );
+      await loadCurrentQuestion();
 
-      if (res.data.endOfInterview) {
-        setEndOfInterview(true);
-        setQuestion(null);
-      } else {
-        hasSpokenRef.current = false;  // reset speech flag
-        setQuestion(res.data);
-        setProgress((prev) => ({
-          ...prev,
-          current: prev.current + 1,
-        }));
-      }
+      setProgress((prev) => ({
+        ...prev,
+        current: prev.current + 1,
+      }));
     } catch (err) {
       console.error(err);
     } finally {
@@ -309,6 +297,7 @@ useEffect(() => {
 
       <div className="w-full max-w-3xl bg-white shadow-md rounded-xl p-8">
 
+        {/* ACTIVE QUESTION */}
         {!loading && question && !endOfInterview && (
           <>
             <h2 className="text-xl font-semibold mb-4 text-gray-800">
@@ -324,21 +313,32 @@ useEffect(() => {
             />
 
             <div className="mt-6 flex flex-col items-center">
-              {!isRecording ? (
+
+              {!isRecording && !isTranscribing && (
                 <button
                   onClick={startRecording}
-                  disabled={isTranscribing}
                   className="px-6 py-3 rounded-full bg-black text-white"
                 >
                   🎤 Start Recording
                 </button>
-              ) : (
+              )}
+
+              {isRecording && (
                 <button
                   onClick={stopRecording}
                   className="px-6 py-3 rounded-full bg-red-600 text-white animate-pulse"
                 >
                   ⏹ Stop Recording ({formatTime(recordingTime)})
                 </button>
+              )}
+
+              {isTranscribing && (
+                <div className="flex flex-col items-center">
+                  <div className="w-8 h-8 border-4 border-gray-300 border-t-black rounded-full animate-spin mb-3"></div>
+                  <p className="text-gray-600">
+                    Transcribing your response...
+                  </p>
+                </div>
               )}
             </div>
 
@@ -352,14 +352,20 @@ useEffect(() => {
           </>
         )}
 
+        {/* END OF INTERVIEW SCREEN */}
         {!loading && endOfInterview && (
           <div className="text-center mt-6">
+            <h2 className="text-xl font-semibold mb-6 text-gray-800">
+              🎉 You have completed the interview!
+            </h2>
+
             <button
               onClick={handleLoadMore}
               className="w-full bg-blue-600 text-white py-3 rounded-lg mb-4"
             >
               Load More Questions
             </button>
+
             <button
               onClick={handleFinish}
               className="w-full bg-green-600 text-white py-3 rounded-lg"
