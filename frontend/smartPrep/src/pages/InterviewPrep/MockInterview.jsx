@@ -51,7 +51,7 @@ const MockInterview = () => {
     };
 
     startInterview();
-  }, []);
+  }, []); 
 
   // ---------------- LOAD VOICES ONCE ----------------
 useEffect(() => {
