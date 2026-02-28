@@ -4,15 +4,15 @@ import axiosInstance from "../../utils/axiosInstance";
 
 /* 🔵 Circular Chart */
 const CircularProgress = ({ value, label, gradientId }) => {
+
+  const numericValue = Number(value) || 0;
+  const safeValue = Math.max(0, Math.min(100, numericValue)); // clamp 0–100
+
   const radius = 90;
   const stroke = 14;
   const normalizedRadius = radius - stroke / 2;
   const circumference = normalizedRadius * 2 * Math.PI;
-
-  // 1–5 scale → percentage
-  const numericValue = Number(value) || 0;
-  const percent = (numericValue / 5) * 100;
-  const offset = circumference - (percent / 100) * circumference;
+  const offset = circumference - (safeValue / 100) * circumference;
 
   return (
     <div className="relative flex items-center justify-center">
@@ -24,6 +24,7 @@ const CircularProgress = ({ value, label, gradientId }) => {
           </linearGradient>
         </defs>
 
+        {/* Background Circle */}
         <circle
           stroke="#1f2937"
           fill="transparent"
@@ -33,6 +34,7 @@ const CircularProgress = ({ value, label, gradientId }) => {
           cy={radius}
         />
 
+        {/* Progress Circle */}
         <circle
           stroke={`url(#${gradientId})`}
           fill="transparent"
@@ -48,8 +50,8 @@ const CircularProgress = ({ value, label, gradientId }) => {
       </svg>
 
       <div className="absolute flex flex-col items-center justify-center">
-        <span className="text-4xl font-bold text-white leading-none">
-          {Number(value).toFixed(2)}
+        <span className="text-4xl font-bold text-white">
+          {safeValue}%
         </span>
         <span className="text-sm text-gray-400 mt-2">
           {label}
@@ -60,6 +62,7 @@ const CircularProgress = ({ value, label, gradientId }) => {
 };
 
 const Summary = () => {
+
   const { sessionId } = useParams();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
@@ -89,18 +92,28 @@ const Summary = () => {
     answers,
   } = data;
 
+  const confidencePercent =
+    averageConfidence != null
+      ? Math.round((averageConfidence / 5) * 100)
+      : 0;
+
+  const clarityPercent =
+    averageClarity != null
+      ? Math.round((averageClarity / 5) * 100)
+      : 0;
+
   return (
     <div className="min-h-screen relative overflow-hidden bg-[#0f172a] text-white px-6 py-16">
-      <div className="absolute top-0 left-0 w-full h-[400px] bg-gradient-to-r from-indigo-600/20 via-cyan-500/20 to-purple-600/20 blur-3xl"></div>
 
       <div className="relative max-w-6xl mx-auto">
 
-        {/* Header */}
         <div className="mb-16">
           <h1 className="text-5xl font-extrabold bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
             AI Interview Performance Report
           </h1>
+
           <div className="h-1 w-24 bg-gradient-to-r from-indigo-400 to-cyan-400 mt-4 rounded-full"></div>
+
           <p className="text-gray-400 mt-6 text-lg max-w-2xl">
             Comprehensive behavioral intelligence and communication analytics powered by SmartPrep.
           </p>
@@ -121,22 +134,23 @@ const Summary = () => {
           </div>
 
           {/* Confidence */}
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-10 rounded-3xl flex items-center justify-center">
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-10 rounded-3xl shadow-xl flex items-center justify-center">
             <CircularProgress
-              value={averageConfidence}
+              value={confidencePercent}
               label="Confidence"
               gradientId="confidenceGradient"
             />
           </div>
 
           {/* Clarity */}
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-10 rounded-3xl flex items-center justify-center">
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-10 rounded-3xl shadow-xl flex items-center justify-center">
             <CircularProgress
-              value={averageClarity}
+              value={clarityPercent}
               label="Clarity"
               gradientId="clarityGradient"
             />
           </div>
+
         </div>
 
         {/* Detailed Breakdown */}
@@ -158,7 +172,6 @@ const Summary = () => {
                 {ans.question?.question}
               </p>
 
-              {/* User Answer */}
               <div className="bg-black/30 border border-white/10 p-6 rounded-2xl mb-5">
                 <p className="text-sm text-gray-400 mb-2">
                   Your Response
@@ -168,32 +181,23 @@ const Summary = () => {
                 </p>
               </div>
 
-              {/* Expected Answer */}
-              <div className="bg-indigo-900/30 border border-indigo-500/20 p-6 rounded-2xl mb-5">
-                <p className="text-sm text-indigo-300 mb-2">
-                  Expected Answer
-                </p>
-                <p className="text-gray-200">
-                  {ans.question?.answer || "No reference answer available."}
-                </p>
-              </div>
-
               <div className="flex gap-6 text-gray-400 text-sm">
                 <span>
                   Confidence:{" "}
                   <span className="text-green-400 font-semibold">
-                    {ans.confidenceScore?.toFixed(2)}
+                    {Math.round(((ans.confidenceScore || 0) / 5) * 100)}%
                   </span>
                 </span>
                 <span>
                   Clarity:{" "}
                   <span className="text-blue-400 font-semibold">
-                    {ans.clarityScore?.toFixed(2)}
+                    {Math.round(((ans.clarityScore || 0) / 5) * 100)}%
                   </span>
                 </span>
               </div>
             </div>
           ))}
+
         </div>
 
         <div className="text-center mt-20">
@@ -204,6 +208,7 @@ const Summary = () => {
             Return to Dashboard
           </button>
         </div>
+
       </div>
     </div>
   );

@@ -15,12 +15,11 @@ exports.startInterview = async (req, res) => {
     }
 
     if (!session.questions || session.questions.length === 0) {
-      return res
-        .status(400)
-        .json({ message: "No questions available for this session" });
+      return res.status(400).json({
+        message: "No questions available for this session",
+      });
     }
 
-    // Reset interview state
     session.currentQuestionIndex = 0;
     session.answers = [];
     session.isInterviewCompleted = false;
@@ -37,7 +36,6 @@ exports.startInterview = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-
 
 
 // 2️⃣ Get Current Question
@@ -76,7 +74,7 @@ exports.getCurrentQuestion = async (req, res) => {
 };
 
 
-
+// 3️⃣ Submit Answer (1–5 scale only)
 exports.submitAnswer = async (req, res) => {
   try {
     const {
@@ -116,7 +114,6 @@ exports.submitAnswer = async (req, res) => {
 
     const currentQuestionId = session.questions[index];
 
-    // 🔥 SAFE SCORE HANDLING
     const safeConfidence =
       typeof confidenceScore === "number" ? confidenceScore : null;
 
@@ -128,7 +125,6 @@ exports.submitAnswer = async (req, res) => {
       transcript: transcript.trim(),
       confidenceScore: safeConfidence,
       clarityScore: safeClarity,
-
       audioSampleId: sampleId || null,
       duration: features?.duration || null,
       speakingRate: features?.speaking_rate || null,
@@ -171,8 +167,6 @@ exports.submitAnswer = async (req, res) => {
 };
 
 
-
-
 // 4️⃣ Finish Interview
 exports.finishInterview = async (req, res) => {
   try {
@@ -197,8 +191,7 @@ exports.finishInterview = async (req, res) => {
 };
 
 
-
-// 5️⃣ Interview Summary (Improved with answer population)
+// 5️⃣ Interview Summary (Raw 1–5 scale)
 exports.getInterviewSummary = async (req, res) => {
   try {
     const { sessionId } = req.params;
@@ -219,13 +212,13 @@ exports.getInterviewSummary = async (req, res) => {
       return res.json({
         totalQuestions,
         totalAnswered: 0,
+        evaluatedAnswers: 0,
         averageConfidence: 0,
         averageClarity: 0,
         answers: [],
       });
     }
 
-    // 🔥 Only include answers that have AI scores
     const scoredAnswers = answers.filter(
       (ans) =>
         typeof ans.confidenceScore === "number" &&
@@ -246,13 +239,11 @@ exports.getInterviewSummary = async (req, res) => {
         0
       );
 
-      averageConfidence = (
-        totalConfidence / scoredAnswers.length
-      ).toFixed(2);
+      averageConfidence =
+        totalConfidence / scoredAnswers.length;
 
-      averageClarity = (
-        totalClarity / scoredAnswers.length
-      ).toFixed(2);
+      averageClarity =
+        totalClarity / scoredAnswers.length;
     }
 
     return res.json({
@@ -269,6 +260,7 @@ exports.getInterviewSummary = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 // 6️⃣ Load More Questions
 exports.loadMoreQuestions = async (req, res) => {
@@ -324,7 +316,7 @@ exports.loadMoreQuestions = async (req, res) => {
       return res.status(429).json({
         code: error.code || "AI_PREVIEW_LIMIT_REACHED",
         message:
-          "SmartPrep is running on limited free AI capacity. You’ve reached the free preview limit.",
+          "SmartPrep is running on limited free AI capacity.",
       });
     }
 

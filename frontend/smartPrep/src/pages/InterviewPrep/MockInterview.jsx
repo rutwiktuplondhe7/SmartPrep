@@ -13,24 +13,18 @@ const MockInterview = () => {
   const [endOfInterview, setEndOfInterview] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
 
-  // 🎤 Recording
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-
-  // 🔊 Speaking animation
   const [isSpeaking, setIsSpeaking] = useState(false);
 
-  // 🔥 Research Metadata
   const [audioMeta, setAudioMeta] = useState(null);
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const timerRef = useRef(null);
 
-  // =============================
-  // 🚀 START INTERVIEW
-  // =============================
+  // ---------------- START INTERVIEW ----------------
   useEffect(() => {
     const startInterview = async () => {
       try {
@@ -53,9 +47,7 @@ const MockInterview = () => {
     startInterview();
   }, []);
 
-  // =============================
-  // 🔊 SMART INTERVIEWER VOICE
-  // =============================
+  // ---------------- TEXT TO SPEECH ----------------
   useEffect(() => {
     if (!question?.questionText) return;
 
@@ -69,30 +61,26 @@ const MockInterview = () => {
     const voices = window.speechSynthesis.getVoices();
 
     const preferredVoice =
-      voices.find(v =>
-        v.lang.toLowerCase().includes("en") &&
-        v.name.toLowerCase().includes("female")
-      ) ||
-      voices.find(v => v.lang.toLowerCase().includes("en"));
+      voices.find(
+        (v) =>
+          v.lang.toLowerCase().includes("en") &&
+          v.name.toLowerCase().includes("female")
+      ) || voices.find((v) => v.lang.toLowerCase().includes("en"));
 
-    if (preferredVoice) {
-      utterance.voice = preferredVoice;
-    }
+    if (preferredVoice) utterance.voice = preferredVoice;
 
     utterance.rate = 0.95;
     utterance.pitch = 1;
     utterance.volume = 1;
 
-    utterance.onend = () => {
-      setIsSpeaking(false);
-    };
+    utterance.onend = () => setIsSpeaking(false);
 
     setTimeout(() => {
       window.speechSynthesis.speak(utterance);
     }, 400);
-
   }, [question]);
 
+  // ---------------- LOAD QUESTION ----------------
   const loadCurrentQuestion = async () => {
     try {
       setLoading(true);
@@ -119,14 +107,14 @@ const MockInterview = () => {
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
-  // =============================
-  // 🎤 RECORDING
-  // =============================
+  // ---------------- RECORDING ----------------
   const startRecording = async () => {
     if (isRecording || isTranscribing) return;
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+      });
 
       const recorder = new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
@@ -163,6 +151,7 @@ const MockInterview = () => {
           if (res.data?.transcript) {
             setAnswer(res.data.transcript);
 
+            // 🔥 STORE RAW ML VALUES (NO 0-100 CONVERSION HERE)
             setAudioMeta({
               sampleId: res.data.sampleId,
               features: res.data.features,
@@ -170,7 +159,6 @@ const MockInterview = () => {
               clarityScore: res.data.clarityScore,
             });
           }
-
         } catch (err) {
           console.error("Transcription failed:", err);
         } finally {
@@ -182,9 +170,8 @@ const MockInterview = () => {
       setIsRecording(true);
 
       timerRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
+        setRecordingTime((prev) => prev + 1);
       }, 1000);
-
     } catch (error) {
       console.error("Microphone access denied:", error);
     }
@@ -195,16 +182,14 @@ const MockInterview = () => {
     mediaRecorderRef.current.stop();
   };
 
-  // =============================
-  // ➡️ SUBMIT ANSWER
-  // =============================
+  // ---------------- SUBMIT ANSWER ----------------
   const handleNext = async () => {
     if (!answer.trim()) return;
 
     try {
       setIsSubmitting(true);
 
-      const res = await axiosInstance.post("/api/interview/submit", {
+      await axiosInstance.post("/api/interview/submit", {
         sessionId,
         transcript: answer,
         sampleId: audioMeta?.sampleId,
@@ -216,17 +201,20 @@ const MockInterview = () => {
       setAnswer("");
       setAudioMeta(null);
 
+      const res = await axiosInstance.get(
+        `/api/interview/${sessionId}/current`
+      );
+
       if (res.data.endOfInterview) {
         setEndOfInterview(true);
         setQuestion(null);
       } else {
-        setQuestion(res.data.nextQuestion);
-        setProgress(prev => ({
+        setQuestion(res.data);
+        setProgress((prev) => ({
           ...prev,
           current: prev.current + 1,
         }));
       }
-
     } catch (err) {
       console.error(err);
     } finally {
@@ -251,11 +239,10 @@ const MockInterview = () => {
       setEndOfInterview(false);
       await loadCurrentQuestion();
 
-      setProgress(prev => ({
+      setProgress((prev) => ({
         ...prev,
         total: prev.total + 5,
       }));
-
     } catch (err) {
       console.error(err);
     } finally {
@@ -294,23 +281,6 @@ const MockInterview = () => {
             <h2 className="text-xl font-semibold mb-4 text-gray-800">
               {question.questionText}
             </h2>
-
-            {isSpeaking && (
-              <div className="flex justify-center mb-6">
-                <div className="flex gap-1 items-end h-6">
-                  {[...Array(5)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="w-1.5 bg-indigo-600 animate-pulse"
-                      style={{
-                        height: `${10 + Math.random() * 20}px`,
-                        animationDelay: `${i * 0.2}s`
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
 
             <textarea
               value={answer}
@@ -365,6 +335,7 @@ const MockInterview = () => {
             </button>
           </div>
         )}
+
       </div>
     </div>
   );

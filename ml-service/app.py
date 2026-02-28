@@ -25,7 +25,7 @@ whisper_model = WhisperModel("small", device="cpu", compute_type="int8")
 DEVICE = torch.device("cpu")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(BASE_DIR, "models", "smartprep_regression_lstm_unfrozen.pt")
+MODEL_PATH = os.path.join(BASE_DIR, "models", "smartprep_regression_final.pt")
 
 # Load regression model
 regression_model = CNN_BiLSTM(num_classes=2)
