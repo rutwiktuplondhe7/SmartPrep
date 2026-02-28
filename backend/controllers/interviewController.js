@@ -126,9 +126,16 @@ exports.submitAnswer = async (req, res) => {
       confidenceScore: safeConfidence,
       clarityScore: safeClarity,
       audioSampleId: sampleId || null,
+
+      // Acoustic Details
       duration: features?.duration || null,
       speakingRate: features?.speaking_rate || null,
-      rmsEnergy: features?.rms_energy || null,
+      pauseRatio: features?.pause_ratio || null,
+      rmsMean: features?.rms_mean || null,
+      rmsVariance: features?.rms_variance || null,
+      fillerCount: features?.filler_count || null,
+      pitchMean: features?.pitch_mean || null,
+      pitchVariance: features?.pitch_variance || null,
     });
 
     session.currentQuestionIndex += 1;

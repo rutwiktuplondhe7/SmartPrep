@@ -19,7 +19,6 @@ const answerSchema = new mongoose.Schema(
       type: Number,
     },
 
-    // 🔥 NEW RESEARCH FIELDS
     audioSampleId: {
       type: String,
     },
@@ -32,7 +31,27 @@ const answerSchema = new mongoose.Schema(
       type: Number,
     },
 
-    rmsEnergy: {
+    pauseRatio: {
+      type: Number,
+    },
+
+    rmsMean: {
+      type: Number,
+    },
+
+    rmsVariance: {
+      type: Number,
+    },
+
+    fillerCount: {
+      type: Number,
+    },
+
+    pitchMean: {
+      type: Number,
+    },
+
+    pitchVariance: {
       type: Number,
     },
   },
