@@ -74,7 +74,7 @@ exports.getCurrentQuestion = async (req, res) => {
 };
 
 
-// 3️⃣ Submit Answer (1–5 scale only)
+// 3️⃣ Submit Answer
 exports.submitAnswer = async (req, res) => {
   try {
     const {
@@ -84,6 +84,7 @@ exports.submitAnswer = async (req, res) => {
       features,
       confidenceScore,
       clarityScore,
+      videoConfidence,
     } = req.body;
 
     const session = await Session.findById(sessionId);
@@ -93,41 +94,51 @@ exports.submitAnswer = async (req, res) => {
     }
 
     if (session.isInterviewCompleted) {
-      return res.status(400).json({
-        message: "Interview already completed",
-      });
+      return res.status(400).json({ message: "Interview already completed" });
     }
 
     if (!transcript || transcript.trim() === "") {
-      return res.status(400).json({
-        message: "Answer transcript is required",
-      });
+      return res.status(400).json({ message: "Answer transcript is required" });
     }
 
     const index = session.currentQuestionIndex;
 
     if (index >= session.questions.length) {
-      return res.status(400).json({
-        message: "No more questions available",
-      });
+      return res.status(400).json({ message: "No more questions available" });
     }
 
     const currentQuestionId = session.questions[index];
 
-    const safeConfidence =
+    const safeAudioConfidence =
       typeof confidenceScore === "number" ? confidenceScore : null;
 
     const safeClarity =
       typeof clarityScore === "number" ? clarityScore : null;
 
+    const safeVideoConfidence =
+      typeof videoConfidence === "number" && videoConfidence > 0
+        ? videoConfidence
+        : null;
+
+    // Fuse audio + video into final confidence
+    // Audio is 1–5 scale, video is 0–1 → scale video to 1–5 first
+    let finalConfidence = safeAudioConfidence;
+
+    if (safeAudioConfidence !== null && safeVideoConfidence !== null) {
+      const videoScaled = (safeVideoConfidence * 4) + 1;
+      finalConfidence = (0.6 * safeAudioConfidence) + (0.4 * videoScaled);
+      finalConfidence = parseFloat(Math.min(5, Math.max(1, finalConfidence)).toFixed(2));
+    } else if (safeAudioConfidence === null && safeVideoConfidence !== null) {
+      finalConfidence = parseFloat(((safeVideoConfidence * 4) + 1).toFixed(2));
+    }
+
     session.answers.push({
       question: currentQuestionId,
       transcript: transcript.trim(),
-      confidenceScore: safeConfidence,
+      confidenceScore: finalConfidence,
       clarityScore: safeClarity,
       audioSampleId: sampleId || null,
 
-      // Acoustic Details
       duration: features?.duration || null,
       speakingRate: features?.speaking_rate || null,
       pauseRatio: features?.pause_ratio || null,
@@ -146,11 +157,8 @@ exports.submitAnswer = async (req, res) => {
     let nextQuestion = null;
 
     if (hasNextQuestion) {
-      const nextQuestionId =
-        session.questions[session.currentQuestionIndex];
-
+      const nextQuestionId = session.questions[session.currentQuestionIndex];
       const questionDoc = await Question.findById(nextQuestionId);
-
       nextQuestion = {
         questionId: questionDoc._id,
         questionText: questionDoc.question,
@@ -160,7 +168,7 @@ exports.submitAnswer = async (req, res) => {
     await session.save();
 
     return res.json({
-      confidenceScore: safeConfidence,
+      confidenceScore: finalConfidence,
       clarityScore: safeClarity,
       hasNextQuestion,
       nextQuestion,
@@ -198,7 +206,7 @@ exports.finishInterview = async (req, res) => {
 };
 
 
-// 5️⃣ Interview Summary (Raw 1–5 scale)
+// 5️⃣ Interview Summary
 exports.getInterviewSummary = async (req, res) => {
   try {
     const { sessionId } = req.params;
@@ -236,21 +244,13 @@ exports.getInterviewSummary = async (req, res) => {
     let averageClarity = 0;
 
     if (scoredAnswers.length > 0) {
-      const totalConfidence = scoredAnswers.reduce(
-        (sum, ans) => sum + ans.confidenceScore,
-        0
-      );
-
-      const totalClarity = scoredAnswers.reduce(
-        (sum, ans) => sum + ans.clarityScore,
-        0
-      );
-
       averageConfidence =
-        totalConfidence / scoredAnswers.length;
+        scoredAnswers.reduce((sum, ans) => sum + ans.confidenceScore, 0) /
+        scoredAnswers.length;
 
       averageClarity =
-        totalClarity / scoredAnswers.length;
+        scoredAnswers.reduce((sum, ans) => sum + ans.clarityScore, 0) /
+        scoredAnswers.length;
     }
 
     return res.json({
@@ -322,8 +322,7 @@ exports.loadMoreQuestions = async (req, res) => {
     if (status === 429) {
       return res.status(429).json({
         code: error.code || "AI_PREVIEW_LIMIT_REACHED",
-        message:
-          "SmartPrep is running on limited free AI capacity.",
+        message: "SmartPrep is running on limited free AI capacity.",
       });
     }
 
