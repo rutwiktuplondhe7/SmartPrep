@@ -49,6 +49,7 @@ const MockInterview = () => {
     };
 
     startInterview();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ---------------- LOAD VOICES ----------------
@@ -278,37 +279,52 @@ const MockInterview = () => {
       : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center py-10 px-4">
+    <div className="min-h-screen relative overflow-hidden bg-[#FFF7F2] flex flex-col items-center py-10 px-4">
 
-      <div className="w-full max-w-3xl mb-6">
-        <div className="flex justify-between text-sm text-gray-600 mb-2">
+      <div className="pointer-events-none absolute top-0 left-0 w-[420px] h-[420px] rounded-full bg-rose-200/25 blur-[90px] -translate-x-1/2 -translate-y-1/3" />
+      <div className="pointer-events-none absolute bottom-0 right-0 w-[420px] h-[420px] rounded-full bg-orange-200/25 blur-[90px] translate-x-1/3 translate-y-1/3" />
+
+      <div className="relative w-full max-w-3xl mb-6 z-10">
+        <div className="flex justify-between text-sm text-slate-700 mb-2 font-medium">
           <span>
             Question {progress.current} of {progress.total}
           </span>
           <span>{Math.round(progressPercent)}% Complete</span>
         </div>
-        <div className="w-full bg-gray-200 h-2 rounded-full">
+        <div className="w-full bg-rose-100 h-2 rounded-full overflow-hidden">
           <div
-            className="bg-black h-2 rounded-full transition-all duration-300"
+            className="bg-linear-to-r from-primary to-[#FF8A5B] h-2 rounded-full transition-all duration-300"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
       </div>
 
-      <div className="w-full max-w-3xl bg-white shadow-md rounded-xl p-8">
+      <div className="relative z-10 w-full max-w-3xl bg-[#FFFBF8] shadow-xl rounded-3xl border border-rose-100 p-8 md:p-10">
 
         {/* ACTIVE QUESTION */}
         {!loading && question && !endOfInterview && (
           <>
-            <h2 className="text-xl font-semibold mb-4 text-gray-800">
-              {question.questionText}
-            </h2>
+            <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
+              <h2 className="text-xl font-semibold text-black">
+                {question.questionText}
+              </h2>
+
+              {isSpeaking && (
+                <span className="text-[12px] font-semibold text-rose-700 bg-rose-100 border border-rose-200 px-3 py-1.5 rounded-full">
+                  Speaking question
+                </span>
+              )}
+            </div>
+
+            <p className="text-sm text-slate-700 mb-4">
+              Type your response or use the microphone to transcribe.
+            </p>
 
             <textarea
               value={answer}
               onChange={(e) => setAnswer(e.target.value)}
               rows={6}
-              className="w-full border border-gray-300 rounded-lg p-4"
+              className="w-full border border-rose-100 rounded-2xl p-4 bg-white/90 text-black outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-100 transition-colors"
               placeholder="Type your answer here or use mic..."
             />
 
@@ -317,7 +333,7 @@ const MockInterview = () => {
               {!isRecording && !isTranscribing && (
                 <button
                   onClick={startRecording}
-                  className="px-6 py-3 rounded-full bg-black text-white"
+                  className="px-6 py-3 rounded-full bg-black text-white font-semibold shadow-lg shadow-rose-600/10 hover:bg-primary transition-colors"
                 >
                   🎤 Start Recording
                 </button>
@@ -326,7 +342,7 @@ const MockInterview = () => {
               {isRecording && (
                 <button
                   onClick={stopRecording}
-                  className="px-6 py-3 rounded-full bg-red-600 text-white animate-pulse"
+                  className="px-6 py-3 rounded-full bg-primary text-white font-semibold shadow-lg shadow-rose-600/10 animate-pulse"
                 >
                   ⏹ Stop Recording ({formatTime(recordingTime)})
                 </button>
@@ -334,8 +350,8 @@ const MockInterview = () => {
 
               {isTranscribing && (
                 <div className="flex flex-col items-center">
-                  <div className="w-8 h-8 border-4 border-gray-300 border-t-black rounded-full animate-spin mb-3"></div>
-                  <p className="text-gray-600">
+                  <div className="w-8 h-8 border-4 border-rose-200 border-t-primary rounded-full animate-spin mb-3"></div>
+                  <p className="text-slate-600">
                     Transcribing your response...
                   </p>
                 </div>
@@ -345,7 +361,7 @@ const MockInterview = () => {
             <button
               onClick={handleNext}
               disabled={isSubmitting || isTranscribing}
-              className="mt-6 w-full bg-black text-white py-3 rounded-lg"
+              className="mt-6 w-full bg-linear-to-r from-primary to-[#FF8A5B] text-white py-3 rounded-2xl font-semibold shadow-lg shadow-rose-600/10 hover:opacity-95 disabled:opacity-60 transition-all"
             >
               Next Question
             </button>
@@ -355,20 +371,28 @@ const MockInterview = () => {
         {/* END OF INTERVIEW SCREEN */}
         {!loading && endOfInterview && (
           <div className="text-center mt-6">
-            <h2 className="text-xl font-semibold mb-6 text-gray-800">
-              🎉 You have completed the interview!
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-rose-100 border border-rose-200 mb-5">
+              <span className="text-2xl">🎉</span>
+            </div>
+
+            <h2 className="text-xl font-semibold mb-3 text-black">
+              You have completed the interview!
             </h2>
+
+            <p className="text-sm text-slate-700 mb-6 max-w-md mx-auto">
+              Review your progress, load more questions, or finish the session to view the summary.
+            </p>
 
             <button
               onClick={handleLoadMore}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg mb-4"
+              className="w-full bg-linear-to-r from-primary to-[#FF8A5B] text-white py-3 rounded-2xl mb-4 font-semibold shadow-lg shadow-rose-600/10 hover:opacity-95 transition-all"
             >
               Load More Questions
             </button>
 
             <button
               onClick={handleFinish}
-              className="w-full bg-green-600 text-white py-3 rounded-lg"
+              className="w-full bg-black text-white py-3 rounded-2xl font-semibold shadow-lg shadow-rose-600/10 hover:bg-primary transition-colors"
             >
               Finish Interview
             </button>
