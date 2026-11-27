@@ -1,0 +1,49 @@
+# Python virtual environments (recreate with: python -m venv venv && pip install -r requirements.txt)
+venv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Large public datasets (re-downloadable, too big for GitHub). See README.
+datasets/librispeech/
+datasets/ravdess/
+video_service/datasets/
+
+# Media / data files in general (the app's own recorded dataset is re-included below)
+*.wav
+*.flac
+*.mp3
+*.mp4
+*.avi
+*.npy
+*.npz
+*.zip
+*.csv
+
+# The app's own collected dataset (voice recordings + metadata.csv): personal data, never pushed
+datasets/smartprep/
+
+# NOTE: trained model weights (*.pt, *.joblib) are intentionally tracked (see models/README.md),
+# they are required to run and retrain the service.
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Logs / temp
+*.log
+logs/
+tmp/
+uploads/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

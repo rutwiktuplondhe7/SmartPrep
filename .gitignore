@@ -1,43 +1,8 @@
-# Node.js
-node_modules/
-npm-debug.log
-yarn-error.log
-pnpm-debug.log
-
-# Build
-dist/
-build/
-
-# Logs
-*.log
-logs/
-
-# Env files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Uploaded files
-uploads/
-
-# IDE / OS
-.DS_Store
-.vscode/
-.idea/
-
-# ML datasets
-ml-service/datasets/
-
-# Research dataset collection
+# Local-only data collection folder (not pushed to GitHub)
 data_collection/
 
-__pycache__/
-*.pyc
-
-# Python virtual environment
-ml-service/venv
-
-# Trained model weights
-ml-service/models/*.pt
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

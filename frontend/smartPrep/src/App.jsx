@@ -6,6 +6,7 @@ import LandingPage from "./pages/Landingpage";
 import Dashboard from "./pages/Home/Dashboard";
 import MockInterview from "./pages/InterviewPrep/MockInterview";
 import Summary from "./pages/InterviewPrep/SummaryPage";
+import InterviewPrep from "./pages/InterviewPrep/InterviewPrep";
 import UserProvider from "./context/userContext";
 
 const App = () => {
@@ -20,6 +21,11 @@ const App = () => {
           <Route
             path="/mock-interview/:sessionId"
             element={<MockInterview />}
+          />
+
+          <Route
+            path="/interview-prep/:sessionId"
+            element={<InterviewPrep />}
           />
 
           {/* Summary Page */}

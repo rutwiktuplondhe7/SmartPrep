@@ -247,192 +247,176 @@ const MockInterview = () => {
     navigate(`/summary/${sessionId}`);
   };
 
-  const handleLoadMore = async () => {
-    try {
-      setLoading(true);
-      await axiosInstance.post("/api/interview/load-more", { sessionId, count: 5 });
-      setEndOfInterview(false);
-      await loadCurrentQuestion();
-      setProgress((prev) => ({ ...prev, total: prev.total + 5 }));
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const progressPercent =
     progress.total > 0 ? ((progress.current - 1) / progress.total) * 100 : 0;
 
   // ---------------- UI ----------------
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <div className="min-h-screen bg-[#FFF7F2] py-8 px-4 relative overflow-hidden">
+      {/* Background blur decorative element */}
+      <div className="w-[500px] h-[500px] bg-rose-200/25 blur-[65px] absolute top-0 left-0 pointer-events-none z-0" />
 
-      {/* PROGRESS BAR */}
-      <div className="max-w-6xl mx-auto mb-6">
-        <div className="flex justify-between text-sm text-gray-500 mb-2">
-          <span>Question {progress.current} of {progress.total}</span>
-          <span>{Math.round(progressPercent)}% Complete</span>
+      <div className="relative z-10">
+        {/* PROGRESS BAR */}
+        <div className="max-w-6xl mx-auto mb-6">
+          <div className="flex justify-between text-sm text-gray-600 font-medium mb-2">
+            <span>Question {progress.current} of {progress.total}</span>
+            <span>{Math.round(progressPercent)}% Complete</span>
+          </div>
+          <div className="w-full bg-rose-100 h-1.5 rounded-full">
+            <div
+              className="bg-[#FF5A3C] h-1.5 rounded-full transition-all duration-500"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
         </div>
-        <div className="w-full bg-gray-200 h-1.5 rounded-full">
-          <div
-            className="bg-black h-1.5 rounded-full transition-all duration-500"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
-      </div>
 
-      {/* TWO-COLUMN LAYOUT */}
-      <div className="max-w-6xl mx-auto flex gap-6 items-start">
+        {/* TWO-COLUMN LAYOUT */}
+        <div className="max-w-6xl mx-auto flex gap-6 items-start">
 
-        {/* LEFT — Question + Answer */}
-        <div className="flex-1 bg-white shadow-md rounded-xl p-8">
+          {/* LEFT — Question + Answer */}
+          <div className="flex-1 bg-[#FFFBF8] border border-rose-100 shadow-md shadow-rose-100/50 rounded-xl p-8">
 
-          {loading && (
-            <div className="flex justify-center py-12">
-              <div className="w-8 h-8 border-4 border-gray-200 border-t-black rounded-full animate-spin" />
-            </div>
-          )}
+            {loading && (
+              <div className="flex justify-center py-12">
+                <div className="w-8 h-8 border-4 border-rose-100 border-t-[#FF5A3C] rounded-full animate-spin" />
+              </div>
+            )}
 
-          {!loading && question && !endOfInterview && (
-            <>
-              <h2 className="text-xl font-semibold text-gray-800 mb-5">
-                {question.questionText}
-              </h2>
+            {!loading && question && !endOfInterview && (
+              <>
+                <h2 className="text-xl font-semibold text-black mb-5">
+                  {question.questionText}
+                </h2>
 
-              <textarea
-                value={answer}
-                onChange={(e) => setAnswer(e.target.value)}
-                rows={6}
-                className="w-full border border-gray-300 rounded-lg p-4 text-gray-700 resize-none focus:outline-none focus:ring-2 focus:ring-black"
-                placeholder="Type your answer here or use the mic..."
+                <textarea
+                  value={answer}
+                  onChange={(e) => setAnswer(e.target.value)}
+                  rows={6}
+                  className="w-full border border-rose-200 focus:border-[#FF5A3C] rounded-lg p-4 text-gray-800 bg-white resize-none focus:outline-none focus:ring-1 focus:ring-[#FF5A3C]"
+                  placeholder="Type your answer here or use the mic..."
+                />
+
+                <div className="mt-5 flex flex-col items-center gap-3">
+                  {!isRecording && !isTranscribing && (
+                    <button
+                      onClick={startRecording}
+                      className="px-8 py-3 rounded-full bg-black text-white text-sm font-semibold hover:bg-rose-50 hover:text-black border border-transparent hover:border-rose-200 transition cursor-pointer"
+                    >
+                      🎤 Start Recording
+                    </button>
+                  )}
+
+                  {isRecording && (
+                    <button
+                      onClick={stopRecording}
+                      className="px-8 py-3 rounded-full bg-red-600 text-white text-sm font-semibold animate-pulse cursor-pointer"
+                    >
+                      ⏹ Stop Recording ({formatTime(recordingTime)})
+                    </button>
+                  )}
+
+                  {isTranscribing && (
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-7 h-7 border-4 border-rose-100 border-t-[#FF5A3C] rounded-full animate-spin" />
+                      <p className="text-sm text-gray-500 font-medium">Analyzing your response...</p>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={handleNext}
+                  disabled={isSubmitting || isTranscribing || !answer.trim()}
+                  className="mt-6 w-full bg-linear-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-lg text-sm font-semibold hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {isSubmitting ? "Submitting..." : "Next Question →"}
+                </button>
+              </>
+            )}
+
+            {!loading && endOfInterview && (
+              <div className="text-center py-6">
+                <h2 className="text-xl font-semibold text-black mb-2">
+                  🎉 Interview Complete!
+                </h2>
+                <p className="text-gray-600 text-sm mb-8">
+                  Great job. You can now view your results.
+                </p>
+                <button
+                  onClick={handleFinish}
+                  className="w-full bg-black text-white py-3 rounded-lg text-sm font-semibold hover:bg-rose-950 transition cursor-pointer"
+                >
+                  Finish & See Results
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT — Video Sidebar */}
+          <div className="w-[450px] flex-shrink-0 flex flex-col gap-3">
+
+            {/* Camera box */}
+            <div className="bg-gray-900 rounded-xl overflow-hidden aspect-video relative">
+              <video
+                ref={videoRef}
+                autoPlay
+                muted
+                playsInline
+                className="w-full h-full object-cover"
               />
 
-              <div className="mt-5 flex flex-col items-center gap-3">
-                {!isRecording && !isTranscribing && (
-                  <button
-                    onClick={startRecording}
-                    className="px-8 py-3 rounded-full bg-black text-white text-sm font-medium hover:bg-gray-800 transition"
-                  >
-                    🎤 Start Recording
-                  </button>
-                )}
+              {/* Placeholder until camera is ready */}
+              {!cameraReady && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 z-10">
+                  <div className="text-4xl mb-2">📷</div>
+                  <p className="text-xs text-center px-4">Starting camera...</p>
+                </div>
+              )}
 
-                {isRecording && (
-                  <button
-                    onClick={stopRecording}
-                    className="px-8 py-3 rounded-full bg-red-600 text-white text-sm font-medium animate-pulse"
-                  >
-                    ⏹ Stop Recording ({formatTime(recordingTime)})
-                  </button>
-                )}
-
-                {isTranscribing && (
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="w-7 h-7 border-4 border-gray-200 border-t-black rounded-full animate-spin" />
-                    <p className="text-sm text-gray-500">Analyzing your response...</p>
-                  </div>
-                )}
-              </div>
-
-              <button
-                onClick={handleNext}
-                disabled={isSubmitting || isTranscribing || !answer.trim()}
-                className="mt-6 w-full bg-black text-white py-3 rounded-lg text-sm font-medium hover:bg-gray-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? "Submitting..." : "Next Question →"}
-              </button>
-            </>
-          )}
-
-          {!loading && endOfInterview && (
-            <div className="text-center py-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-2">
-                🎉 Interview Complete!
-              </h2>
-              <p className="text-gray-500 text-sm mb-8">
-                Great job. You can load more questions or view your results.
-              </p>
-              <button
-                onClick={handleLoadMore}
-                className="w-full bg-blue-600 text-white py-3 rounded-lg mb-3 text-sm font-medium hover:bg-blue-700 transition"
-              >
-                Load More Questions
-              </button>
-              <button
-                onClick={handleFinish}
-                className="w-full bg-green-600 text-white py-3 rounded-lg text-sm font-medium hover:bg-green-700 transition"
-              >
-                Finish & See Results
-              </button>
+              {/* Recording badge */}
+              {isRecording && (
+                <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black bg-opacity-60 px-2.5 py-1 rounded-full z-10">
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                  <span className="text-white text-xs font-medium">
+                    {formatTime(recordingTime)}
+                  </span>
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* RIGHT — Video Sidebar */}
-        <div className="w-72 flex-shrink-0 flex flex-col gap-3">
-
-          {/* Camera box */}
-          <div className="bg-gray-900 rounded-xl overflow-hidden aspect-video relative">
-            <video
-              ref={videoRef}
-              autoPlay
-              muted
-              playsInline
-              className="w-full h-full object-cover"
-            />
-
-            {/* Placeholder until camera is ready */}
-            {!cameraReady && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 z-10">
-                <div className="text-4xl mb-2">📷</div>
-                <p className="text-xs text-center px-4">Starting camera...</p>
+            {/* Video confidence card */}
+            {videoConfidence !== null && !isRecording && (
+              <div className="bg-[#FFFBF8] border border-rose-100 rounded-xl shadow-sm p-4">
+                <p className="text-xs text-gray-500 font-semibold mb-1 uppercase tracking-wide">
+                  Video Confidence
+                </p>
+                <div className="flex items-end gap-2">
+                  <span className="text-2xl font-bold text-black">
+                    {Math.round(videoConfidence * 100)}
+                  </span>
+                  <span className="text-gray-500 text-sm mb-0.5">/ 100</span>
+                </div>
+                <div className="mt-2 w-full bg-rose-100 h-1.5 rounded-full">
+                  <div
+                    className="h-1.5 rounded-full bg-[#FF5A3C] transition-all duration-700"
+                    style={{ width: `${Math.round(videoConfidence * 100)}%` }}
+                  />
+                </div>
               </div>
             )}
 
-            {/* Recording badge */}
-            {isRecording && (
-              <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black bg-opacity-60 px-2.5 py-1 rounded-full z-10">
-                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                <span className="text-white text-xs font-medium">
-                  {formatTime(recordingTime)}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Video confidence card */}
-          {videoConfidence !== null && !isRecording && (
-            <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
-              <p className="text-xs text-gray-400 mb-1 uppercase tracking-wide">
-                Video Confidence
-              </p>
-              <div className="flex items-end gap-2">
-                <span className="text-2xl font-semibold text-gray-800">
-                  {Math.round(videoConfidence * 100)}
-                </span>
-                <span className="text-gray-400 text-sm mb-0.5">/ 100</span>
-              </div>
-              <div className="mt-2 w-full bg-gray-100 h-1.5 rounded-full">
-                <div
-                  className="h-1.5 rounded-full bg-black transition-all duration-700"
-                  style={{ width: `${Math.round(videoConfidence * 100)}%` }}
-                />
-              </div>
+            {/* Tips card */}
+            <div className="bg-[#FFFBF8] border border-rose-100 rounded-xl shadow-sm p-4">
+              <p className="text-xs text-gray-500 font-semibold mb-2 uppercase tracking-wide">Tips</p>
+              <ul className="text-xs text-gray-600 space-y-1.5">
+                <li>👁 Look directly at the camera</li>
+                <li>🙂 Keep a natural expression</li>
+                <li>🪑 Sit still and upright</li>
+                <li>💡 Speak clearly and at pace</li>
+              </ul>
             </div>
-          )}
 
-          {/* Tips card */}
-          <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
-            <p className="text-xs text-gray-400 mb-2 uppercase tracking-wide">Tips</p>
-            <ul className="text-xs text-gray-500 space-y-1.5">
-              <li>👁 Look directly at the camera</li>
-              <li>🙂 Keep a natural expression</li>
-              <li>🪑 Sit still and upright</li>
-              <li>💡 Speak clearly and at pace</li>
-            </ul>
           </div>
-
         </div>
       </div>
     </div>

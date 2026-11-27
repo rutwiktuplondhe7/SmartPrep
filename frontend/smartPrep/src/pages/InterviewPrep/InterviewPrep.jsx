@@ -1,6 +1,6 @@
 import moment from 'moment';
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from "framer-motion";
 import { LuCircleAlert, LuListCollapse } from 'react-icons/lu';
 import SpinnerLoader from '../../components/Loader/SpinnerLoader';
@@ -16,6 +16,7 @@ import SkeletonLoader from '../../components/Loader/SkeletonLoader';
 
 const InterviewPrep = () => {
   const { sessionId } = useParams();
+  const navigate = useNavigate();
 
   const [sessionData, setSessionData] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
@@ -179,7 +180,7 @@ const InterviewPrep = () => {
       <RoleInfoHeader
         isDrawerOpen={openLeanMoreDrawer}
         role={sessionData?.role || ""}
-        topicToFocus={sessionData?.topicToFocus || ""}
+        topicsToFocus={sessionData?.topicsToFocus || ""}
         experience={sessionData?.experience || "-"}
         questions={sessionData?.questions?.length || "-"}
         description={sessionData?.description || ""}
@@ -201,9 +202,27 @@ const InterviewPrep = () => {
               }
             `}
           >
-            <h2 className='text-lg font-semibold text-black mb-4'>
-              Interview Q & A
-            </h2>
+            <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
+              <h2 className='text-lg font-semibold text-black'>
+                Interview Q & A
+              </h2>
+              <div className="flex items-center gap-3">
+                {sessionData?.answers?.length > 0 && (
+                  <button
+                    onClick={() => navigate(`/summary/${sessionId}`)}
+                    className='flex items-center gap-2 text-sm text-[#FF5A3C] font-semibold bg-rose-50 border border-rose-200 px-6 py-2.5 rounded-full hover:bg-rose-100 shadow-xs transition cursor-pointer'
+                  >
+                    📊 See Results
+                  </button>
+                )}
+                <button
+                  onClick={() => navigate(`/mock-interview/${sessionId}`)}
+                  className='flex items-center gap-2 text-sm text-white font-semibold bg-linear-to-r from-[#FF5A3C] to-[#FF8A5B] px-6 py-2.5 rounded-full hover:opacity-90 shadow-md transition cursor-pointer'
+                >
+                  🎓 Take Interview
+                </button>
+              </div>
+            </div>
 
             <AnimatePresence>
               {sessionData?.questions?.map((data, index) => {
