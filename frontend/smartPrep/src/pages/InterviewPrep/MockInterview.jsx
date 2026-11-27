@@ -69,6 +69,7 @@ const MockInterview = () => {
       }
     };
     startInterview();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ---------------- LOAD VOICES ----------------
@@ -285,9 +286,17 @@ const MockInterview = () => {
 
             {!loading && question && !endOfInterview && (
               <>
-                <h2 className="text-xl font-semibold text-black mb-5">
-                  {question.questionText}
-                </h2>
+                <div className="flex items-center justify-between gap-4 mb-5 flex-wrap">
+                  <h2 className="text-xl font-semibold text-black">
+                    {question.questionText}
+                  </h2>
+
+                  {isSpeaking && (
+                    <span className="text-[12px] font-semibold text-rose-700 bg-rose-100 border border-rose-200 px-3 py-1.5 rounded-full">
+                      Speaking question
+                    </span>
+                  )}
+                </div>
 
                 <textarea
                   value={answer}

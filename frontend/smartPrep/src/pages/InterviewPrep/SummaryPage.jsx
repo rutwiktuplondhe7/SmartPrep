@@ -130,7 +130,7 @@ const Summary = () => {
         </div>
 
         {/* Top Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-20">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
 
           {/* Completion */}
           <div className="bg-[#FFFBF8] border border-rose-100 p-10 rounded-3xl shadow-md shadow-rose-100/50 text-center flex flex-col items-center justify-center hover:shadow-lg transition">
